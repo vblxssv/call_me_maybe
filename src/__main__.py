@@ -1,40 +1,24 @@
-import torch
-import gc
-from llm_sdk import Small_LLM_Model
+import sys
+from .parse import PathExtractor
+from .function_scheme import *
 
 def main():
-    model = Small_LLM_Model()
-    
-
-    text = (
-        "json"
-    )
-    token_quantity = 50
-    tokens = model.encode(text).view(-1).tolist()
-
-    print("Генерация: ", end="", flush=True)
-
     try:
-        for i in range(token_quantity):
-            context = tokens[-512:] 
-            logits = model.get_logits_from_input_ids(context)
-            next_token_id = logits.index(max(logits))
-            if next_token_id in [151643, 151645]:
-                break
-            tokens.append(next_token_id)
-            word = model.decode([next_token_id])
-            print(word, end="", flush=True)
-            if i % 10 == 0:
-                gc.collect()
-                if torch.backends.mps.is_available():
-                    torch.mps.empty_cache()
-                elif torch.cuda.is_available():
-                    torch.cuda.empty_cache()
+        config = PathExtractor()
+        
+        print(f"Functions: {config.functions}")
+        print(f"Input: {config.input}")
+        print(f"Output: {config.output}")
+        
+        funcs: List[FunctionScheme] = SchemeLoader.load(config.functions)
 
-    except KeyboardInterrupt:
-        print("\nГенерация прервана пользователем.")
+        for i in funcs:
+            print(i)
 
-    print("\n\n--- Готово ---")
+    except ValueError as e:
+        print(f"Error: {e}")
+        sys.exit(1)
+
 
 if __name__ == "__main__":
     main()
