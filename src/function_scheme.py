@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from typing import List, Dict
-import json
+import json, os
 
 @dataclass
 class FunctionParameter:
@@ -31,11 +31,17 @@ class FunctionScheme:
 class SchemeLoader:
     @staticmethod
     def load(file_path: str) -> List[FunctionScheme]:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(f"File not found: {file_path}")
+
+        with open(file_path, 'r') as f:
+            try:
+                data = json.load(f)
+            except json.JSONDecodeError:
+                raise ValueError(f"Invalid JSON format in: {file_path}")
 
         if not isinstance(data, list):
-            raise ValueError("JSON root must be a list")
+            raise ValueError(f"JSON root must be a list in: {file_path}")
 
         return [
             FunctionScheme(
