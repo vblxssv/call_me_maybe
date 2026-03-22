@@ -5,8 +5,8 @@ PYTHON = $(UV) run python
 install:
 	$(UV) sync
 
-run:
-	$(PYTHON) main.py
+run: install
+	$(PYTHON) src/main.py
 
 debug:
 	$(PYTHON) -m pdb main.py
