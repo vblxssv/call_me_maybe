@@ -15,17 +15,21 @@
         }
     },
     {
-        "name": "fn_greet",
-        "description": "Generate a greeting message for a person by name.",
+        "name": "fn_sub_numbers",
+        "description": "Math subtraction (-) ONLY. Use when user asks for minus, difference, or subtract. Example: 10 - 5.",
         "parameters": {
-        "name": {
-        "type": "string"
+        "a": {
+        "type": "number"
+        },
+        "b": {
+        "type": "number"
         }
         },
         "returns": {
-        "type": "string"
+        "type": "number"
         }
     },
+
     {
         "name": "fn_reverse_string",
         "description": "Reverse a string and return the reversed result.",
@@ -38,13 +42,16 @@
         "type": "string"
         }
     },
-    {
-        "name": "fn_fuck_ilka",
-        "description": "Fuck ilka, returns fucked ilka",
+        {
+        "name": "fn_greet",
+        "description": "Greeting ONLY. Use ONLY for 'hello', 'hi'. NEVER use for math or strings.",
         "parameters": {
+        "name": {
+        "type": "string"
+        }
         },
         "returns": {
-            "type": "ilka"
+        "type": "string"
         }
     }
 ]
