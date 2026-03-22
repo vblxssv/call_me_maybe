@@ -1,15 +1,21 @@
 UV = uv
 PYTHON = $(UV) run python
 
+FUNCTIONS_JSON = data/input/function_definitions.json
+INPUT_JSON = data/input/function_calling_tests.json
+OUTPUT_JSON = data/output/function_calling_results.json
 
 install:
 	$(UV) sync
 
 run: install
-	$(PYTHON) src/main.py
+	$(PYTHON) -m src \
+		--functions_definition $(FUNCTIONS_JSON) \
+		--input $(INPUT_JSON) \
+		--output $(OUTPUT_JSON)
 
 debug:
-	$(PYTHON) -m pdb main.py
+	$(PYTHON) -m pdb src/__main__.py
 
 clean:
 	rm -rf __pycache__

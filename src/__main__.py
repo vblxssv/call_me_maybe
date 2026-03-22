@@ -7,9 +7,9 @@ def main():
     
 
     text = (
-        "залупа пенис хер это хиток спору нет"
+        "json"
     )
-    token_quantity = 300 
+    token_quantity = 50
     tokens = model.encode(text).view(-1).tolist()
 
     print("Генерация: ", end="", flush=True)
