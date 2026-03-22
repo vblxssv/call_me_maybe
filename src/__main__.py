@@ -1,31 +1,26 @@
 import sys
-from .parse import PathExtractor
-from .function_scheme import *
-import sys
 from typing import List
 from .parse import PathExtractor
 from .function_scheme import FunctionScheme, SchemeLoader
-
+from llm_sdk import Small_LLM_Model
 
 def main():
-    try:
-        config = PathExtractor()
-        
-        print(f"Functions path: {config.functions}")
-        print(f"Input path: {config.input}")
-        print(f"Output path: {config.output}")
-        
-        funcs: List[FunctionScheme] = SchemeLoader.load(config.functions)
+    config = PathExtractor()
+    funcs: List[FunctionScheme] = SchemeLoader.load(config.functions)
+    
+    model = Small_LLM_Model()
+    
+    text = '{"prompt": "What is the sum of 228 and 1488?", "name": "fn_add_numbers", "parameters": {"a": 228.0, "b": '
+    
+    tokens = 10
 
-        for func in funcs:
-            print(func)
+    input_ids = model.encode(text)[0].tolist()
 
-    except (ValueError, FileNotFoundError) as e:
-        print(f"Error: {e}")
-        sys.exit(1)
-    except Exception as e:
-        print(f"Unexpected error: {e}")
-        sys.exit(1)
+    for _ in range(tokens):
+        logits = model.get_logits_from_input_ids(input_ids)
+        input_ids.append(logits.index(max(logits)))
+
+    print(model.decode(input_ids))
 
 
 if __name__ == "__main__":

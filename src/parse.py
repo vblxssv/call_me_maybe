@@ -1,10 +1,5 @@
 import sys, os
 
-import sys
-import os
-import sys
-
-
 
 class PathExtractor:
     def __init__(self):
