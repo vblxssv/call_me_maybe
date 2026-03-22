@@ -37,5 +37,14 @@
         "returns": {
         "type": "string"
         }
+    },
+    {
+        "name": "fn_fuck_ilka",
+        "description": "Fuck ilka, returns fucked ilka",
+        "parameters": {
+        },
+        "returns": {
+            "type": "ilka"
+        }
     }
 ]
