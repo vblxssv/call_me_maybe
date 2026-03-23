@@ -15,6 +15,21 @@
         }
     },
     {
+        "name": "fn_add_strs",
+        "description": "Add two string together and return combined new string",
+        "parameters": {
+            "str1": {
+                "type": "string"
+            },
+            "str2": {
+                "type": "string"
+            }
+        },
+        "returns": {
+            "type": "string"
+        }
+    },
+    {
         "name": "fn_sub_numbers",
         "description": "Math subtraction (-) ONLY. Use when user asks for minus, difference, or subtract. Example: 10 - 5.",
         "parameters": {
