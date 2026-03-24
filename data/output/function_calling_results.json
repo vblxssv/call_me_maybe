@@ -6,5 +6,20 @@
             "a": 6,
             "b": 7
         }
+    },
+    {
+        "prompt": "how would look like word 'Masha' backwards?",
+        "name": "fn_reverse_string",
+        "parameters": {
+            "s": "Masha"
+        }
+    },
+    {
+        "prompt": "i need to concatenate 'ilka' and 'pidor'",
+        "name": "fn_add_strs",
+        "parameters": {
+            "str1": "ilka",
+            "str2": "pidor"
+        }
     }
 ]

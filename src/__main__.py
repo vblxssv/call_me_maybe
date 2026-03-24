@@ -39,44 +39,83 @@ def fn_add_word(model, input_ids: List[int], func_names: List[str]) -> str | Non
     return None
 
 
+# def fn_get_json(model, prompt: str, funcs: List[FunctionScheme]) -> str:
+#     schemes_dict = {f.name: f for f in funcs}
+#     tools_repr = "\n".join([f"- {s.name}: {s.description}" for s in funcs])
+#     system_prompt = f"Available tools:\n{tools_repr}\n\nprompt: {prompt}\nJSON:\n"
+#     input_ids = model.encode(system_prompt)[0].tolist()
+
+#     for fixed_text in ['{\n  "prompt": "', prompt, '",\n  "name": "']:
+#         input_ids.extend(model.encode(fixed_text)[0].tolist())
+
+#     func_names = list(schemes_dict.keys())
+#     selected_name = fn_add_word(model, input_ids, func_names)
+#     input_ids.extend(model.encode('",\n  ')[0].tolist())
+#     input_ids.extend(model.encode('"parameters": {')[0].tolist())
+#     scheme = schemes_dict[selected_name]
+#     param_items = list(scheme.params_dict.items())
+
+#     for i, (p_name, p_type) in enumerate(param_items):
+#         input_ids.extend(model.encode(f'\n    "{p_name}": ')[0].tolist())
+#         if "string" in p_type.lower():
+#             input_ids.extend(model.encode('"')[0].tolist())
+#             for _ in range(50):
+#                 logits = model.get_logits_from_input_ids(input_ids)
+#                 next_id = int(torch.argmax(torch.tensor(logits)).item())
+#                 char = model.decode([next_id])
+#                 if '"' in char: break
+#                 input_ids.append(next_id)
+#             input_ids.extend(model.encode('"')[0].tolist())
+#         else:
+#             for _ in range(20):
+#                 logits = model.get_logits_from_input_ids(input_ids)
+#                 next_id = int(torch.argmax(torch.tensor(logits)).item())
+#                 char = model.decode([next_id])
+#                 if any(s in char for s in [',', ' ', '\n', '}']): break
+#                 input_ids.append(next_id)
+#         if i < len(param_items) - 1:
+#             input_ids.extend(model.encode(',')[0].tolist())
+#     input_ids.extend(model.encode('\n  }\n}')[0].tolist())
+#     res_str = model.decode(input_ids).split("JSON:\n")[-1].strip()
+#     return res_str
+
+
 def fn_get_json(model, prompt: str, funcs: List[FunctionScheme]) -> str:
     schemes_dict = {f.name: f for f in funcs}
+    
+    def add_text(text: str):
+        input_ids.extend(model.encode(text)[0].tolist())
+
+    def generate_until(stop_chars: list, max_tokens: int):
+        for _ in range(max_tokens):
+            logits = model.get_logits_from_input_ids(input_ids)
+            next_id = int(torch.argmax(torch.tensor(logits)).item())
+            char = model.decode([next_id])
+            if any(s in char for s in stop_chars):
+                break
+            input_ids.append(next_id)
+
     tools_repr = "\n".join([f"- {s.name}: {s.description}" for s in funcs])
     system_prompt = f"Available tools:\n{tools_repr}\n\nprompt: {prompt}\nJSON:\n"
     input_ids = model.encode(system_prompt)[0].tolist()
 
-    for fixed_text in ['{\n  "prompt": "', prompt, '",\n  "name": "']:
-        input_ids.extend(model.encode(fixed_text)[0].tolist())
-
-    func_names = list(schemes_dict.keys())
-    selected_name = fn_add_word(model, input_ids, func_names)
-    input_ids.extend(model.encode('",\n  ')[0].tolist())
-    input_ids.extend(model.encode('"parameters": {')[0].tolist())
+    add_text(f'{{\n  "prompt": "{prompt}",\n  "name": "')
+    selected_name = fn_add_word(model, input_ids, list(schemes_dict.keys()))
     scheme = schemes_dict[selected_name]
-    param_items = list(scheme.params_dict.items())
+    add_text('",\n  "parameters": {')
 
-    for i, (p_name, p_type) in enumerate(param_items):
-        input_ids.extend(model.encode(f'\n    "{p_name}": ')[0].tolist())
+    for i, (p_name, p_type) in enumerate(scheme.params_dict.items()):
+        add_text(f'\n    "{p_name}": ')        
         if "string" in p_type.lower():
-            input_ids.extend(model.encode('"')[0].tolist())
-            for _ in range(50):
-                logits = model.get_logits_from_input_ids(input_ids)
-                next_id = int(torch.argmax(torch.tensor(logits)).item())
-                char = model.decode([next_id])
-                if '"' in char: break
-                input_ids.append(next_id)
-            input_ids.extend(model.encode('"')[0].tolist())
+            add_text('"')
+            generate_until(['"'], max_tokens=50)
+            add_text('"')
         else:
-            for _ in range(20):
-                logits = model.get_logits_from_input_ids(input_ids)
-                next_id = int(torch.argmax(torch.tensor(logits)).item())
-                char = model.decode([next_id])
-                if any(s in char for s in [',', ' ', '\n', '}']): break
-                input_ids.append(next_id)
-        if i < len(param_items) - 1:
-            input_ids.extend(model.encode(',')[0].tolist())
-    input_ids.extend(model.encode('\n  }\n}')[0].tolist())
-    return model.decode(input_ids).split("JSON:")[-1].strip()
+            generate_until([',', ' ', '\n', '}'], max_tokens=20)
+        if i < len(scheme.params_dict) - 1:
+            add_text(',')
+    add_text('\n  }\n}')
+    return model.decode(input_ids).split("JSON:\n")[-1].strip()
 
 
 def add_json_string_to_file(json_str: str, filename: str = "data.json"):
@@ -85,31 +124,19 @@ def add_json_string_to_file(json_str: str, filename: str = "data.json"):
     except json.JSONDecodeError as e:
         print(f"Ошибка: строка не является валидным JSON. {e}")
         return False
-
-    # 2. Если файла нет или он пустой — создаем новый с массивом внутри
     if not os.path.exists(filename) or os.path.getsize(filename) == 0:
         with open(filename, 'w', encoding='utf-8') as f:
             json.dump([new_data], f, indent=4, ensure_ascii=False)
         return True
-
-    # 3. Если файл есть, читаем его, добавляем объект и перезаписываем
     try:
         with open(filename, 'r+', encoding='utf-8') as f:
-            # Загружаем существующий массив
             data_list = json.load(f)
-            
-            # Убеждаемся, что это именно список
             if not isinstance(data_list, list):
                 data_list = [data_list]
-            
-            # Добавляем новые данные
             data_list.append(new_data)
-            
-            # Сбрасываем каретку в начало и пишем обновленный список
             f.seek(0)
             json.dump(data_list, f, indent=4, ensure_ascii=False)
-            f.truncate() # Отрезаем лишнее, если новый текст короче старого
-            
+            f.truncate()
         return True
     except Exception as e:
         print(f"Не удалось обновить файл: {e}")
@@ -121,6 +148,14 @@ def main():
     parse = PathExtractor()
     schemes: List[FunctionScheme] = SchemeLoader.load(parse.functions)
     prompt = "what is the sum of 6 and 7?"
+    json: str = fn_get_json(model, prompt, schemes)
+    add_json_string_to_file(json, parse.output)
+
+    prompt = "how would look like word 'Masha' backwards?"
+    json: str = fn_get_json(model, prompt, schemes)
+    add_json_string_to_file(json, parse.output)
+
+    prompt = "i need to concatenate 'ilka' and 'pidor'"
     json: str = fn_get_json(model, prompt, schemes)
     add_json_string_to_file(json, parse.output)
 
