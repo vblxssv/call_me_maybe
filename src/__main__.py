@@ -39,47 +39,6 @@ def fn_add_word(model, input_ids: List[int], func_names: List[str]) -> str | Non
     return None
 
 
-# def fn_get_json(model, prompt: str, funcs: List[FunctionScheme]) -> str:
-#     schemes_dict = {f.name: f for f in funcs}
-#     tools_repr = "\n".join([f"- {s.name}: {s.description}" for s in funcs])
-#     system_prompt = f"Available tools:\n{tools_repr}\n\nprompt: {prompt}\nJSON:\n"
-#     input_ids = model.encode(system_prompt)[0].tolist()
-
-#     for fixed_text in ['{\n  "prompt": "', prompt, '",\n  "name": "']:
-#         input_ids.extend(model.encode(fixed_text)[0].tolist())
-
-#     func_names = list(schemes_dict.keys())
-#     selected_name = fn_add_word(model, input_ids, func_names)
-#     input_ids.extend(model.encode('",\n  ')[0].tolist())
-#     input_ids.extend(model.encode('"parameters": {')[0].tolist())
-#     scheme = schemes_dict[selected_name]
-#     param_items = list(scheme.params_dict.items())
-
-#     for i, (p_name, p_type) in enumerate(param_items):
-#         input_ids.extend(model.encode(f'\n    "{p_name}": ')[0].tolist())
-#         if "string" in p_type.lower():
-#             input_ids.extend(model.encode('"')[0].tolist())
-#             for _ in range(50):
-#                 logits = model.get_logits_from_input_ids(input_ids)
-#                 next_id = int(torch.argmax(torch.tensor(logits)).item())
-#                 char = model.decode([next_id])
-#                 if '"' in char: break
-#                 input_ids.append(next_id)
-#             input_ids.extend(model.encode('"')[0].tolist())
-#         else:
-#             for _ in range(20):
-#                 logits = model.get_logits_from_input_ids(input_ids)
-#                 next_id = int(torch.argmax(torch.tensor(logits)).item())
-#                 char = model.decode([next_id])
-#                 if any(s in char for s in [',', ' ', '\n', '}']): break
-#                 input_ids.append(next_id)
-#         if i < len(param_items) - 1:
-#             input_ids.extend(model.encode(',')[0].tolist())
-#     input_ids.extend(model.encode('\n  }\n}')[0].tolist())
-#     res_str = model.decode(input_ids).split("JSON:\n")[-1].strip()
-#     return res_str
-
-
 def fn_get_json(model, prompt: str, funcs: List[FunctionScheme]) -> str:
     schemes_dict = {f.name: f for f in funcs}
     
