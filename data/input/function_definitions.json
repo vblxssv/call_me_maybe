@@ -3,15 +3,15 @@
         "name": "fn_add_numbers",
         "description": "Add two numbers together and return their sum.",
         "parameters": {
-        "a": {
-        "type": "number"
-        },
-        "b": {
-        "type": "number"
-        }
+            "a": {
+                "type": "number"
+            },
+            "b": {
+                "type": "number"
+            }
         },
         "returns": {
-        "type": "number"
+            "type": "number"
         }
     },
     {
@@ -33,40 +33,39 @@
         "name": "fn_sub_numbers",
         "description": "Math subtraction (-) ONLY. Use when user asks for minus, difference, or subtract. Example: 10 - 5.",
         "parameters": {
-        "a": {
-        "type": "number"
-        },
-        "b": {
-        "type": "number"
-        }
+            "a": {
+                "type": "number"
+            },
+            "b": {
+                "type": "number"
+            }
         },
         "returns": {
-        "type": "number"
+            "type": "number"
         }
     },
-
     {
         "name": "fn_reverse_string",
         "description": "Reverse a string and return the reversed result.",
         "parameters": {
-        "s": {
-        "type": "string"
-        }
+            "s": {
+                "type": "string"
+            }
         },
         "returns": {
-        "type": "string"
+            "type": "string"
         }
     },
-        {
+    {
         "name": "fn_greet",
         "description": "Greeting ONLY. Use ONLY for 'hello', 'hi'. NEVER use for math or strings.",
         "parameters": {
-        "name": {
-        "type": "string"
-        }
+            "name": {
+                "type": "string"
+            }
         },
         "returns": {
-        "type": "string"
+            "type": "string"
         }
     }
 ]
