@@ -1,8 +1,12 @@
-from . import *
+from .generator import JSONGenerator
+from .path_extractor import PathExtractor
+from .function_scheme import SchemeLoader, FunctionScheme
+from .writer import Writer
+from .prompt_reader import Reader
 from typing import List
 
 
-def main():
+def main() -> None:
     generator: JSONGenerator = JSONGenerator()
     parse = PathExtractor()
     schemes: List[FunctionScheme] = SchemeLoader.load(parse.functions)
@@ -14,7 +18,7 @@ def main():
         try:
             generated_json_str = generator.generate(prompt, schemes)
             if writer.add_to_json(generated_json_str):
-                print(f"Successfully saved result.")
+                print("Successfully saved result.")
             else:
                 print(f"Failed to save result for prompt: {prompt}")
         except Exception as e:

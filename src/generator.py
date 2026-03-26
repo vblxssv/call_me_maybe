@@ -14,7 +14,7 @@ class JSONGenerator:
         model (Small_LLM_Model): The underlying language model instance.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initializes the JSONGenerator with a Small_LLM_Model."""
         self.model = Small_LLM_Model()
 
@@ -59,7 +59,8 @@ class JSONGenerator:
         Iteratively adds tokens to form one of the allowed strings.
 
         Args:
-            input_ids (List[int]): Current sequence of token IDs (modified in-place).
+            input_ids (List[int]): Current sequence of
+            token IDs (modified in-place).
             allowed_strings (List[str]): List of full strings to match.
 
         Returns:
@@ -68,7 +69,7 @@ class JSONGenerator:
         start_len = len(input_ids)
         for _ in range(50):
             current_gen = self.model.decode(input_ids[start_len:])
-            temp_name = current_gen.replace('"', '').strip()
+            temp_name: str = current_gen.replace('"', '').strip()
 
             if temp_name in allowed_strings:
                 return temp_name
@@ -93,13 +94,16 @@ class JSONGenerator:
         input_ids: List[int],
         stop_chars: List[str],
         max_tokens: int
-    ):
+    ) -> None:
         """
-        Generates tokens until a stop character is encountered or limit reached.
+        Generates tokens until a stop character is
+        encountered or limit reached.
 
         Args:
-            input_ids (List[int]): Current sequence of token IDs (modified in-place).
-            stop_chars (List[str]): Characters that trigger the end of generation.
+            input_ids (List[int]): Current sequence
+            of token IDs (modified in-place).
+            stop_chars (List[str]): Characters that
+            trigger the end of generation.
             max_tokens (int): Maximum number of tokens to generate.
         """
         for _ in range(max_tokens):
@@ -120,7 +124,8 @@ class JSONGenerator:
             funcs (List[Any]): A list of FunctionScheme objects.
 
         Returns:
-            str: A formatted JSON string with the selected function and arguments.
+            str: A formatted JSON string with the selected
+            function and arguments.
         """
         schemes_dict = {f.name: f for f in funcs}
 
@@ -131,7 +136,7 @@ class JSONGenerator:
         )
         input_ids = self.model.encode(system_prompt)[0].tolist()
 
-        def add_text(text: str):
+        def add_text(text: str) -> None:
             """Helper to encode and extend input_ids."""
             input_ids.extend(self.model.encode(text)[0].tolist())
 
@@ -162,5 +167,5 @@ class JSONGenerator:
 
         full_text = self.model.decode(input_ids)
         if "JSON:\n" in full_text:
-            return full_text.split("JSON:\n")[-1].strip()
-        return full_text.strip()
+            return str(full_text.split("JSON:\n")[-1]).strip()
+        return str(full_text).strip()

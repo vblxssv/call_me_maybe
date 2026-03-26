@@ -22,7 +22,7 @@ class Reader:
         Expected format: [{"prompt": "text"}, ...]
 
         Yields:
-            str: The 'prompt' value from each valid dictionary in the JSON list.
+            str: The 'prompt' value from each valid dictionary in a JSON list.
 
         Note:
             Skips invalid items and logs warnings if the file is missing,

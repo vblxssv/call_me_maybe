@@ -30,7 +30,7 @@ class Writer:
             bool: True if the operation was successful, False otherwise.
 
         Note:
-            This method rewrites the entire file to maintain valid JSON 
+            This method rewrites the entire file to maintain valid JSON
             structure, which may be slow for very large files.
         """
         try:
@@ -41,7 +41,6 @@ class Writer:
 
         data_list: List[Any] = []
 
-        # Load existing data if file exists and is not empty
         if os.path.exists(self.path) and os.path.getsize(self.path) > 0:
             try:
                 with open(self.path, "r", encoding="utf-8") as f:
@@ -61,4 +60,3 @@ class Writer:
         except Exception as e:
             print(f"Error writing file: {e}")
             return False
-    

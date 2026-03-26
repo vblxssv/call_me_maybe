@@ -1,5 +1,5 @@
 import sys
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 
 class PathExtractor:
@@ -14,7 +14,7 @@ class PathExtractor:
         paths (Dict[str, str]): A mapping of flag names to their file paths.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         Initializes the PathExtractor and parses sys.argv.
 
@@ -57,31 +57,40 @@ class PathExtractor:
             )
 
     @property
-    def functions(self) -> Optional[str]:
+    def functions(self) -> str:
         """
         Returns the path to the functions definition file.
 
         Returns:
-            Optional[str]: File path string or None if not found.
+            str: File path string.
+
+        Raises:
+            KeyError: If the path was not found (should be caught by init).
         """
-        return self.paths.get("functions_definition")
+        return self.paths["functions_definition"]
 
     @property
-    def input(self) -> Optional[str]:
+    def input(self) -> str:
         """
         Returns the path to the input file.
 
         Returns:
-            Optional[str]: File path string or None if not found.
+            str: File path string.
+
+        Raises:
+            KeyError: If the path was not found (should be caught by init).
         """
-        return self.paths.get("input")
+        return self.paths["input"]
 
     @property
-    def output(self) -> Optional[str]:
+    def output(self) -> str:
         """
         Returns the path to the output file.
 
         Returns:
-            Optional[str]: File path string or None if not found.
+            str: File path string.
+
+        Raises:
+            KeyError: If the path was not found (should be caught by init).
         """
-        return self.paths.get("output")
+        return self.paths["output"]

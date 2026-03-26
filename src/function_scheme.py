@@ -1,7 +1,7 @@
 import json
 import os
 from dataclasses import dataclass
-from typing import Dict, List
+from typing import Dict, List, Any
 
 
 @dataclass
@@ -43,7 +43,8 @@ class FunctionScheme:
         params_dict (Dict[str, str]): A mapping of parameter names to types.
     """
 
-    def __init__(self, name: str, description: str, parameters: dict):
+    def __init__(self, name: str, description: str, parameters: Dict[str, Any]
+                 ):
         self.name = name
         self.description = description
         self.params: List[FunctionParameter] = [

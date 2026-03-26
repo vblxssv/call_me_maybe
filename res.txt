@@ -1,23 +1,12 @@
-uv run flake8 src/
-src/__init__.py:15:2: W292 no newline at end of file
-src/__main__.py:1:1: F403 'from . import *' used; unable to detect undefined names
-src/__main__.py:6:16: F405 'JSONGenerator' may be undefined, or defined from star imports: .
-src/__main__.py:6:32: F405 'JSONGenerator' may be undefined, or defined from star imports: .
-src/__main__.py:7:13: F405 'PathExtractor' may be undefined, or defined from star imports: .
-src/__main__.py:8:19: F405 'FunctionScheme' may be undefined, or defined from star imports: .
-src/__main__.py:8:37: F405 'SchemeLoader' may be undefined, or defined from star imports: .
-src/__main__.py:9:13: F405 'Writer' may be undefined, or defined from star imports: .
-src/__main__.py:9:22: F405 'Writer' may be undefined, or defined from star imports: .
-src/__main__.py:10:13: F405 'Reader' may be undefined, or defined from star imports: .
-src/__main__.py:10:22: F405 'Reader' may be undefined, or defined from star imports: .
-src/__main__.py:17:23: F541 f-string is missing placeholders
-src/generator.py:62:80: E501 line too long (85 > 79 characters)
-src/generator.py:98:80: E501 line too long (80 > 79 characters)
-src/generator.py:101:80: E501 line too long (85 > 79 characters)
-src/generator.py:102:80: E501 line too long (82 > 79 characters)
-src/generator.py:123:80: E501 line too long (82 > 79 characters)
-src/prompt_reader.py:25:80: E501 line too long (80 > 79 characters)
-src/prompt_reader.py:52:70: W292 no newline at end of file
-src/writer.py:33:72: W291 trailing whitespace
-src/writer.py:64:1: W293 blank line contains whitespace
-src/writer.py:64:5: W292 no newline at end of file
+llm_sdk/__init__.py:5: error: Cannot find implementation or library stub for module named "torch"  [import-not-found]
+llm_sdk/__init__.py:6: error: Cannot find implementation or library stub for module named "transformers"  [import-not-found]
+llm_sdk/__init__.py:8: error: Cannot find implementation or library stub for module named "huggingface_hub"  [import-not-found]
+src/path_extractor.py:25: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
+src/path_extractor.py:30: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
+src/generator.py:1: error: Cannot find implementation or library stub for module named "torch"  [import-not-found]
+src/generator.py:1: note: See https://mypy.readthedocs.io/en/stable/running_mypy.html#missing-imports
+src/__main__.py:10: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
+src/__main__.py:12: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
+src/__main__.py:13: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
+src/__main__.py:14: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
+Found 4 errors in 2 files (checked 7 source files)
