@@ -2,7 +2,9 @@ import torch
 from typing import List
 from .function_scheme import FunctionScheme, SchemeLoader
 from llm_sdk import Small_LLM_Model
-from .parse import PathExtractor
+from .path_extractor import PathExtractor
+from .writer import Writer
+from .prompt_reader import Reader
 import json, os
 
 
@@ -23,13 +25,13 @@ def fn_get_next_token_id(model, input_ids: List[int], allowed_strings: List[str]
 
 # Добавляет к промпту 1 из разрешенных слов, НЕ 1 ТОКЕН, А ИМЕННО СЛОВО
 # Использует предыдущую функцию для получения токена
-def fn_add_word(model, input_ids: List[int], func_names: List[str]) -> str | None:
+def fn_add_word(model, input_ids: List[int], allowed_strings: List[str]) -> str | None:
     start_len = len(input_ids)
     for _ in range(50):
         temp_name = model.decode(input_ids[start_len:]).replace('"', '').strip()
-        if temp_name in func_names:
+        if temp_name in allowed_strings:
             return temp_name
-        remaining = [f[len(temp_name):] for f in func_names if f.startswith(temp_name)]
+        remaining = [f[len(temp_name):] for f in allowed_strings if f.startswith(temp_name)]
         if not remaining:
             break
         next_id = fn_get_next_token_id(model, input_ids, remaining)
@@ -77,46 +79,27 @@ def fn_get_json(model, prompt: str, funcs: List[FunctionScheme]) -> str:
     return model.decode(input_ids).split("JSON:\n")[-1].strip()
 
 
-def add_json_string_to_file(json_str: str, filename: str = "data.json"):
-    try:
-        new_data = json.loads(json_str)
-    except json.JSONDecodeError as e:
-        print(f"Ошибка: строка не является валидным JSON. {e}")
-        return False
-    if not os.path.exists(filename) or os.path.getsize(filename) == 0:
-        with open(filename, 'w', encoding='utf-8') as f:
-            json.dump([new_data], f, indent=4, ensure_ascii=False)
-        return True
-    try:
-        with open(filename, 'r+', encoding='utf-8') as f:
-            data_list = json.load(f)
-            if not isinstance(data_list, list):
-                data_list = [data_list]
-            data_list.append(new_data)
-            f.seek(0)
-            json.dump(data_list, f, indent=4, ensure_ascii=False)
-            f.truncate()
-        return True
-    except Exception as e:
-        print(f"Не удалось обновить файл: {e}")
-        return False
-
-
 def main():
     model = Small_LLM_Model()
     parse = PathExtractor()
     schemes: List[FunctionScheme] = SchemeLoader.load(parse.functions)
-    prompt = "what is the sum of 6 and 7?"
-    json: str = fn_get_json(model, prompt, schemes)
-    add_json_string_to_file(json, parse.output)
+    writer: Writer = Writer(parse.output)
+    reader: Reader = Reader(parse.input)
 
-    prompt = "how would look like word 'Masha' backwards?"
-    json: str = fn_get_json(model, prompt, schemes)
-    add_json_string_to_file(json, parse.output)
+    for prompt in reader.stream_prompts():
+        print(f"Processing prompt: '{prompt[:50]}...'")
+        try:
+            generated_json_str = fn_get_json(model, prompt, schemes)
+            if writer.add_to_json(generated_json_str):
+                print(f"Successfully saved result.")
+            else:
+                print(f"Failed to save result for prompt: {prompt}")
+                
+        except Exception as e:
+            print(f"An error occurred during generation: {e}")
+            continue
 
-    prompt = "i need to concatenate 'ilka' and 'pidor'"
-    json: str = fn_get_json(model, prompt, schemes)
-    add_json_string_to_file(json, parse.output)
+    print("Processing complete.")
 
 
 if __name__ == "__main__":
