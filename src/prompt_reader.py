@@ -1,7 +1,7 @@
 import json
 import os
 from dataclasses import dataclass
-from typing import Any, Generator
+from typing import Dict, Generator, Any, List
 
 
 @dataclass
@@ -34,14 +34,10 @@ class Reader:
 
         try:
             with open(self.path, "r", encoding="utf-8") as f:
-                data: Any = json.load(f)
-
-            if not isinstance(data, list):
-                print(f"Error: JSON root in {self.path} must be a list.")
-                return
+                data: List[Dict[str, Any]] = json.load(f)
 
             for item in data:
-                if isinstance(item, dict) and "prompt" in item:
+                if "prompt" in item:
                     yield item["prompt"]
                 else:
                     print(f"Skipping invalid item: {item}")

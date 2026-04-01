@@ -103,15 +103,11 @@ class SchemeLoader:
 
         with open(file_path, 'r', encoding='utf-8') as f:
             try:
-                data = json.load(f)
+                data: list[dict[str, Any]] = json.load(f)
             except json.JSONDecodeError as exc:
                 raise ValueError(
                     f"Invalid JSON format in: {file_path}"
                 ) from exc
-
-        if not isinstance(data, list):
-            raise ValueError(f"JSON root must be a list in: {file_path}")
-
         return [
             FunctionScheme(
                 name=item['name'],

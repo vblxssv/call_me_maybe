@@ -67,5 +67,30 @@
         "returns": {
             "type": "string"
         }
+    },
+
+    {
+        "name": "fn_print_42",
+        "description": "Print number 42",
+        "parameters": {},
+        "returns": {
+            "type": "void"
+        }
+    },
+    {
+        "name": "fn_repeat_string",
+        "description": "Repeats a given string a specified number of times.",
+        "parameters": {
+            "text" : {
+                "type": "string"
+            },
+
+            "count": {
+                "type": "number"
+            }
+        },
+        "returns": {
+            "type": "string"
+        }
     }
 ]

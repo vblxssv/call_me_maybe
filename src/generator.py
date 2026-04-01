@@ -134,11 +134,14 @@ class JSONGenerator:
             f"Available tools:\n{tools_repr}\n\n"
             f"prompt: {prompt}\nJSON:\n"
         )
-        input_ids = self.model.encode(system_prompt)[0].tolist()
+
+        raw_output: Any = self.model.encode(system_prompt)[0]
+        input_ids: List[int] = raw_output.tolist()
 
         def add_text(text: str) -> None:
             """Helper to encode and extend input_ids."""
-            input_ids.extend(self.model.encode(text)[0].tolist())
+            raw_output: Any = self.model.encode(text)[0]
+            input_ids.extend(raw_output.tolist())
 
         add_text(f'{{\n  "prompt": "{prompt}",\n  "name": "')
 
