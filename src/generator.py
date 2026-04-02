@@ -5,170 +5,103 @@ from llm_sdk import Small_LLM_Model
 
 class JSONGenerator:
     """
-    A class to generate structured JSON responses using a Language Model.
-
-    This generator uses constrained sampling to ensure the model output
-    aligns with predefined function schemes and parameter types.
-
-    Attributes:
-        model (Small_LLM_Model): The underlying language model instance.
+    A modular JSON generator for constrained LLM sampling.
+    Designed to be extensible and compliant with clean code principles.
     """
 
     def __init__(self) -> None:
-        """Initializes the JSONGenerator with a Small_LLM_Model."""
         self.model = Small_LLM_Model()
 
-    def _get_next_token_id(
-        self,
-        input_ids: List[int],
-        allowed_strings: List[str]
-    ) -> Optional[int]:
-        """
-        Predicts the next token ID constrained by a list of allowed strings.
+    def _get_encoded(self, text: str) -> List[int]:
+        raw_data: Any = self.model.encode(text)[0]
+        return list(raw_data.tolist())
 
-        Args:
-            input_ids (List[int]): Current sequence of token IDs.
-            allowed_strings (List[str]): Strings that are valid at this step.
+    def _extend_ids(self, ids: List[int], text: str) -> None:
+        ids.extend(self._get_encoded(text))
 
-        Returns:
-            Optional[int]: The ID of the most likely allowed token,
-                or None if no tokens are valid.
-        """
-        logits = self.model.get_logits_from_input_ids(input_ids)
-        logits_tensor = torch.tensor(logits)
-
-        allowed_ids = [
-            int(self.model.encode(s)[0][0])
-            for s in allowed_strings
-            if s
-        ]
+    def _sample_constrained(self, ids: List[int],
+                            choices: List[str]) -> Optional[int]:
+        """Calculates logits and applies a mask for allowed strings."""
+        logits = torch.tensor(self.model.get_logits_from_input_ids(ids))
+        allowed_ids = [int(self.model.encode(s)[0][0]) for s in choices if s]
 
         if not allowed_ids:
             return None
 
-        mask = torch.full_like(logits_tensor, -1e18)
+        mask = torch.full_like(logits, -1e18)
         mask[allowed_ids] = 0
-        return int(torch.argmax(logits_tensor + mask).item())
+        return int(torch.argmax(logits + mask).item())
 
-    def _add_word(
-        self,
-        input_ids: List[int],
-        allowed_strings: List[str]
-    ) -> Optional[str]:
-        """
-        Iteratively adds tokens to form one of the allowed strings.
-
-        Args:
-            input_ids (List[int]): Current sequence of
-            token IDs (modified in-place).
-            allowed_strings (List[str]): List of full strings to match.
-
-        Returns:
-            Optional[str]: The matched string if successful, else None.
-        """
-        start_len = len(input_ids)
+    def _generate_word(self, ids: List[int], choices: List[str]) -> str:
+        """Generates a token sequence that must match one of the choices."""
+        start_idx = len(ids)
         for _ in range(50):
-            current_gen = self.model.decode(input_ids[start_len:])
-            temp_name: str = current_gen.replace('"', '').strip()
+            current: str = self.model.decode(
+                ids[start_idx:]).replace('"', '').strip()
+            if current in choices:
+                return current
 
-            if temp_name in allowed_strings:
-                return temp_name
-
-            remaining = [
-                f[len(temp_name):]
-                for f in allowed_strings
-                if f.startswith(temp_name)
-            ]
-
-            if not remaining:
-                break
-
-            next_id = self._get_next_token_id(input_ids, remaining)
+            candidates = [
+                c[len(current):] for c in choices if c.startswith(current)
+                ]
+            next_id = self._sample_constrained(ids, candidates)
             if next_id is None:
                 break
-            input_ids.append(next_id)
-        return None
+            ids.append(next_id)
+        return ""
 
-    def _generate_until(
-        self,
-        input_ids: List[int],
-        stop_chars: List[str],
-        max_tokens: int
-    ) -> None:
-        """
-        Generates tokens until a stop character is
-        encountered or limit reached.
+    def _generate_value(self, ids: List[int], p_type: str) -> None:
+        """Generates a field value based on its expected type."""
+        if "string" in p_type.lower():
+            self._extend_ids(ids, '"')
+            self._generate_until(ids, ['"'], 50)
+            self._extend_ids(ids, '"')
+        else:
+            self._generate_until(ids, [',', ' ', '\n', '}'], 20)
 
-        Args:
-            input_ids (List[int]): Current sequence
-            of token IDs (modified in-place).
-            stop_chars (List[str]): Characters that
-            trigger the end of generation.
-            max_tokens (int): Maximum number of tokens to generate.
-        """
-        for _ in range(max_tokens):
-            logits = self.model.get_logits_from_input_ids(input_ids)
-            next_id = int(torch.argmax(torch.tensor(logits)).item())
-            char = self.model.decode([next_id])
-
-            if any(s in char for s in stop_chars):
+    def _generate_until(self, ids: List[int],
+                        stops: List[str], limit: int) -> None:
+        """Greedy generation until a stop character is encountered."""
+        for _ in range(limit):
+            logits = torch.tensor(self.model.get_logits_from_input_ids(ids))
+            next_id = int(torch.argmax(logits).item())
+            if any(s in self.model.decode([next_id]) for s in stops):
                 break
-            input_ids.append(next_id)
+            ids.append(next_id)
 
     def generate(self, prompt: str, funcs: List[Any]) -> str:
-        """
-        Generates a JSON string representing a tool call based on the prompt.
+        """Main entry point: orchestrates the JSON structure generation."""
+        schemes = {f.name: f for f in funcs}
+        input_ids = self._get_encoded(self._build_prompt(funcs, prompt))
 
-        Args:
-            prompt (str): The user input prompt.
-            funcs (List[Any]): A list of FunctionScheme objects.
+        self._extend_ids(input_ids, f'{{\n  "prompt": "{prompt}",\n  "name": "'
+                         )
 
-        Returns:
-            str: A formatted JSON string with the selected
-            function and arguments.
-        """
-        schemes_dict = {f.name: f for f in funcs}
-
-        tools_repr = "\n".join([f"- {s.name}: {s.description}" for s in funcs])
-        system_prompt = (
-            f"Available tools:\n{tools_repr}\n\n"
-            f"prompt: {prompt}\nJSON:\n"
-        )
-
-        raw_output: Any = self.model.encode(system_prompt)[0]
-        input_ids: List[int] = raw_output.tolist()
-
-        def add_text(text: str) -> None:
-            """Helper to encode and extend input_ids."""
-            raw_output: Any = self.model.encode(text)[0]
-            input_ids.extend(raw_output.tolist())
-
-        add_text(f'{{\n  "prompt": "{prompt}",\n  "name": "')
-
-        selected_name = self._add_word(input_ids, list(schemes_dict.keys()))
-        if not selected_name:
+        name = self._generate_word(input_ids, list(schemes.keys()))
+        if not name:
             return "{}"
 
-        scheme = schemes_dict[selected_name]
-        add_text('",\n  "parameters": {')
+        self._extend_ids(input_ids, '",\n  "parameters": {')
+        params = list(schemes[name].params_dict.items())
 
-        params = list(scheme.params_dict.items())
         for i, (p_name, p_type) in enumerate(params):
-            add_text(f'\n    "{p_name}": ')
-            if "string" in p_type.lower():
-                add_text('"')
-                self._generate_until(input_ids, ['"'], max_tokens=50)
-                add_text('"')
-            else:
-                stop_list = [',', ' ', '\n', '}']
-                self._generate_until(input_ids, stop_list, max_tokens=20)
-
+            self._extend_ids(input_ids, f'\n    "{p_name}": ')
+            self._generate_value(input_ids, p_type)
             if i < len(params) - 1:
-                add_text(',')
+                self._extend_ids(input_ids, ",")
 
-        add_text('\n  }\n}')
+        self._extend_ids(input_ids, '\n  }\n}')
+        return self._format_output(input_ids)
 
-        full_text = self.model.decode(input_ids)
-        if "JSON:\n" in full_text:
-            return str(full_text.split("JSON:\n")[-1]).strip()
-        return str(full_text).strip()
+    def _build_prompt(self, funcs: List[Any], prompt: str) -> str:
+        tools = "\n".join([f"- {f.name}: {f.description}" for f in funcs])
+        return f"Available tools:\n{tools}\n\nprompt: {prompt}\nJSON:\n"
+
+    def _format_output(self, ids: List[int]) -> str:
+        text = self.model.decode(ids)
+        res: str = ''
+        if "JSON:\n" in text:
+            res = text.split("JSON:\n")[-1].strip()
+        else:
+            res = text.strip()
+        return res
