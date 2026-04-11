@@ -12,12 +12,12 @@
         "prompt": "Greet john"
     },
     {
-        "prompt": "Reverse the string'hello'"
+        "prompt": "Reverse the string 'hello'"
     },
     {
         "prompt": "print number '42'"
     },
     {
-        "prompt": "I want to see this string 'ilka pidor' 10 times"
+        "prompt": "I want to see this string 'ilka' 10 times"
     }
 ]

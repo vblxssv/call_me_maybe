@@ -9,9 +9,13 @@ from typing import List
 def main() -> None:
     generator: JSONGenerator = JSONGenerator()
     parse = PathExtractor()
-    schemes: List[FunctionScheme] = SchemeLoader.load(parse.functions)
-    writer: Writer = Writer(parse.output)
+    try:
+        schemes: List[FunctionScheme] = SchemeLoader.load(parse.functions)
+    except Exception:
+        print("Error: Wrong function_definitions.json format")
+        return
     reader: Reader = Reader(parse.input)
+    writer: Writer = Writer(parse.output)
 
     for prompt in reader.stream_prompts():
         print(f"Processing prompt: '{prompt[:50]}...'")

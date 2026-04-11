@@ -4,104 +4,145 @@ from llm_sdk import Small_LLM_Model
 
 
 class JSONGenerator:
-    """
-    A modular JSON generator for constrained LLM sampling.
-    Designed to be extensible and compliant with clean code principles.
-    """
+    """A generator that produces constrained JSON output using an LLM."""
 
     def __init__(self) -> None:
+        """Initialize the generator with the model and internal state."""
         self.model = Small_LLM_Model()
+        self.current_ids: List[int] = []
+        self.current_text: str = ""
 
     def _get_encoded(self, text: str) -> List[int]:
+        """Encode text into a list of token IDs.
+
+        Args:
+            text: The input string to encode.
+
+        Returns:
+            A list of integer token IDs.
+        """
         raw_data: Any = self.model.encode(text)[0]
         return list(raw_data.tolist())
 
-    def _extend_ids(self, ids: List[int], text: str) -> None:
-        ids.extend(self._get_encoded(text))
+    def _sync_push(self, data: Any) -> None:
+        """Add data to the state and synchronize text and tokens.
 
-    def _sample_constrained(self, ids: List[int],
-                            choices: List[str]) -> Optional[int]:
-        """Calculates logits and applies a mask for allowed strings."""
-        logits = torch.tensor(self.model.get_logits_from_input_ids(ids))
-        allowed_ids = [int(self.model.encode(s)[0][0]) for s in choices if s]
+        Args:
+            data: Either a string or a list of token IDs.
+        """
+        if isinstance(data, str):
+            ids = self._get_encoded(data)
+            self.current_ids.extend(ids)
+            self.current_text += data
+        else:
+            self.current_ids.extend(data)
+            self.current_text += self.model.decode(data)
 
-        if not allowed_ids:
-            return None
+    def _sample_constrained(self, choices: List[str]) -> Optional[int]:
+        """Select the most probable token ID from a list of valid choices.
 
-        mask = torch.full_like(logits, -1e18)
-        mask[allowed_ids] = 0
-        return int(torch.argmax(logits + mask).item())
+        Args:
+            choices: A list of possible string continuations.
 
-    def _generate_word(self, ids: List[int], choices: List[str]) -> str:
-        """Generates a token sequence that must match one of the choices."""
-        start_idx = len(ids)
+        Returns:
+            The ID of the best matching token, or None if no choices exist.
+        """
+        logits = self.model.get_logits_from_input_ids(self.current_ids)
+        best_id: Optional[int] = None
+        max_val = float('-inf')
+
+        for s in choices:
+            if not s:
+                continue
+
+            encoded_ids = self.model.encode(s)[0]
+            tid = int(encoded_ids[0].item())
+            val = float(logits[tid])
+
+            if val > max_val:
+                max_val = val
+                best_id = tid
+        return best_id
+
+    def _generate_word(self, choices: List[str]) -> str:
+        """Generate tokens until the text matches one of the choices.
+
+        Args:
+            choices: A list of allowed strings.
+
+        Returns:
+            The generated string that matches a choice, or an empty string.
+        """
+        start_len = len(self.current_text)
         for _ in range(50):
-            current: str = self.model.decode(
-                ids[start_idx:]).replace('"', '').strip()
+            current = self.current_text[start_len:].replace('"', '').strip()
             if current in choices:
                 return current
 
             candidates = [
                 c[len(current):] for c in choices if c.startswith(current)
-                ]
-            next_id = self._sample_constrained(ids, candidates)
+            ]
+            next_id = self._sample_constrained(candidates)
             if next_id is None:
                 break
-            ids.append(next_id)
+            self._sync_push([next_id])
         return ""
 
-    def _generate_value(self, ids: List[int], p_type: str) -> None:
-        """Generates a field value based on its expected type."""
-        if "string" in p_type.lower():
-            self._extend_ids(ids, '"')
-            self._generate_until(ids, ['"'], 50)
-            self._extend_ids(ids, '"')
-        else:
-            self._generate_until(ids, [',', ' ', '\n', '}'], 20)
+    def _generate_until(self, stops: List[str], limit: int) -> None:
+        """Greedily generate tokens until a stop sequence is encountered.
 
-    def _generate_until(self, ids: List[int],
-                        stops: List[str], limit: int) -> None:
-        """Greedy generation until a stop character is encountered."""
+        Args:
+            stops: A list of strings that trigger a generation halt.
+            limit: The maximum number of tokens to generate.
+        """
         for _ in range(limit):
-            logits = torch.tensor(self.model.get_logits_from_input_ids(ids))
-            next_id = int(torch.argmax(logits).item())
-            if any(s in self.model.decode([next_id]) for s in stops):
+            logits = self.model.get_logits_from_input_ids(self.current_ids)
+            next_id = int(torch.as_tensor(logits).argmax().item())
+            char = self.model.decode([next_id])
+            if any(s in char for s in stops):
                 break
-            ids.append(next_id)
+            self._sync_push([next_id])
 
     def generate(self, prompt: str, funcs: List[Any]) -> str:
-        """Main entry point: orchestrates the JSON structure generation."""
+        """Generate a JSON string representing a tool call based on a prompt.
+
+        Args:
+            prompt: The user's input request.
+            funcs: A list of available tool objects.
+
+        Returns:
+            A formatted JSON string or "{}" if generation fails.
+        """
+        self.current_ids, self.current_text = [], ""
         schemes = {f.name: f for f in funcs}
-        input_ids = self._get_encoded(self._build_prompt(funcs, prompt))
 
-        self._extend_ids(input_ids, f'{{\n  "prompt": "{prompt}",\n  "name": "'
-                         )
+        header = "Available tools:\n"
+        header += "\n".join([f"- {f.name}: {f.description}" for f in funcs])
+        header += f"\n\nprompt: {prompt}\nJSON:\n"
+        header += f'{{\n  "prompt": "{prompt}",\n  "name": "'
 
-        name = self._generate_word(input_ids, list(schemes.keys()))
+        self._sync_push(header)
+
+        name = self._generate_word(list(schemes.keys()))
         if not name:
             return "{}"
 
-        self._extend_ids(input_ids, '",\n  "parameters": {')
+        self._sync_push('",\n  "parameters": {')
         params = list(schemes[name].params_dict.items())
 
         for i, (p_name, p_type) in enumerate(params):
-            self._extend_ids(input_ids, f'\n    "{p_name}": ')
-            self._generate_value(input_ids, p_type)
+            self._sync_push(f'\n    "{p_name}": ')
+            if "string" in p_type.lower():
+                self._sync_push('"')
+                self._generate_until(['"'], 50)
+                self._sync_push('"')
+            else:
+                self._generate_until([',', ' ', '\n', '}'], 20)
             if i < len(params) - 1:
-                self._extend_ids(input_ids, ",")
+                self._sync_push(",")
 
-        self._extend_ids(input_ids, '\n  }\n}')
-        return self._format_output(input_ids)
+        self._sync_push('\n  }\n}')
 
-    def _build_prompt(self, funcs: List[Any], prompt: str) -> str:
-        tools = "\n".join([f"- {f.name}: {f.description}" for f in funcs])
-        return f"Available tools:\n{tools}\n\nprompt: {prompt}\nJSON:\n"
-
-    def _format_output(self, ids: List[int]) -> str:
-        text = self.model.decode(ids)
-        res: str = ''
-        if "JSON:\n" in text:
-            res = text.split("JSON:\n")[-1].strip()
-        else:
-            res = text.strip()
-        return res
+        if "JSON:\n" in self.current_text:
+            return self.current_text.split("JSON:\n")[-1].strip()
+        return self.current_text.strip()

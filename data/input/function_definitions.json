@@ -30,21 +30,6 @@
         }
     },
     {
-        "name": "fn_sub_numbers",
-        "description": "Math subtraction (-) ONLY. Use when user asks for minus, difference, or subtract. Example: 10 - 5.",
-        "parameters": {
-            "a": {
-                "type": "number"
-            },
-            "b": {
-                "type": "number"
-            }
-        },
-        "returns": {
-            "type": "number"
-        }
-    },
-    {
         "name": "fn_reverse_string",
         "description": "Reverse a string and return the reversed result.",
         "parameters": {
