@@ -11,6 +11,13 @@ class JSONGenerator:
         self.model = Small_LLM_Model()
         self.current_ids: List[int] = []
         self.current_text: str = ""
+        self._token_cache: dict[str, int] = {}
+
+    def _get_token_id(self, s: str) -> int:
+        """Быстро достает ID первого токена из кеша или модели."""
+        if s not in self._token_cache:
+            self._token_cache[s] = int(self.model.encode(s)[0][0].item())
+        return self._token_cache[s]
 
     def _get_encoded(self, text: str) -> List[int]:
         """Encode text into a list of token IDs.
@@ -39,30 +46,19 @@ class JSONGenerator:
             self.current_text += self.model.decode(data)
 
     def _sample_constrained(self, choices: List[str]) -> Optional[int]:
-        """Select the most probable token ID from a list of valid choices.
+        if not choices:
+            return None
 
-        Args:
-            choices: A list of possible string continuations.
+        raw_logits = self.model.get_logits_from_input_ids(self.current_ids)
+        logits_t = torch.as_tensor(raw_logits)
 
-        Returns:
-            The ID of the best matching token, or None if no choices exist.
-        """
-        logits = self.model.get_logits_from_input_ids(self.current_ids)
-        best_id: Optional[int] = None
-        max_val = float('-inf')
+        candidate_ids = [self._get_token_id(c) for c in choices if c]
+        if not candidate_ids:
+            return None
 
-        for s in choices:
-            if not s:
-                continue
-
-            encoded_ids = self.model.encode(s)[0]
-            tid = int(encoded_ids[0].item())
-            val = float(logits[tid])
-
-            if val > max_val:
-                max_val = val
-                best_id = tid
-        return best_id
+        ids_t = torch.as_tensor(candidate_ids, device=logits_t.device)
+        best_idx = torch.argmax(logits_t[ids_t]).item()
+        return candidate_ids[best_idx]
 
     def _generate_word(self, choices: List[str]) -> str:
         """Generate tokens until the text matches one of the choices.
