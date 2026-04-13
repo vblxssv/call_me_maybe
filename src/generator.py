@@ -63,33 +63,70 @@ class JSONGenerator:
             self.current_ids.extend(data)
             self.current_text += self.model.decode(data)
 
-    def _sample_constrained(self, choices: List[str]) -> Optional[int]:
+    # def _generate_id(self, choices: List[str]) -> Optional[int]:
+    #     """
+    #     Select the most probable token from a list of allowed choices.
+
+    #     Args:
+    #         choices: A list of string candidates for the next token.
+
+    #     Returns:
+    #         The ID of the chosen token or None if no choices provided.
+    #     """
+    #     if not choices:
+    #         return None
+    #     if len(choices) == 1:
+    #         return self._get_token_id(choices[0])
+
+    #     # List[float]
+    #     raw_logits = self.model.get_logits_from_input_ids(self.current_ids)
+    #     # Tensor -> тензор из логитов
+    #     logits_t = torch.as_tensor(raw_logits)
+
+    #     # List[int] -> индексы кандидатов
+    #     candidate_ids = [self._get_token_id(c) for c in choices if c]
+    #     if not candidate_ids:
+    #         return None
+    #     # Tensor -> тензор из кандидатов
+    #     ids_t = torch.as_tensor(candidate_ids, device=logits_t.device)
+    #     # List -> логиты кандидатов
+    #     candidate_values = logits_t[ids_t]
+    #     # Самый вероятный индекс из даных
+    #     best_idx = torch.argmax(candidate_values).item()
+
+    #     return candidate_ids[int(best_idx)]
+
+    def _generate_id(self, choices: List[str]) -> Optional[int]:
         """
-        Select the most probable token from a list of allowed choices.
-
-        Args:
-            choices: A list of string candidates for the next token.
-
-        Returns:
-            The ID of the chosen token or None if no choices provided.
+        Выбор токена без использования torch (на чистых списках).
         """
         if not choices:
             return None
+            
         if len(choices) == 1:
             return self._get_token_id(choices[0])
 
+        # Получаем сырой список float-ов
         raw_logits = self.model.get_logits_from_input_ids(self.current_ids)
-        logits_t = torch.as_tensor(raw_logits)
+        # raw_logits — это теперь просто List[float] размером со словарь (например, 50000)
 
-        candidate_ids = [self._get_token_id(c) for c in choices if c]
-        if not candidate_ids:
-            return None
+        best_logit = float('-inf')
+        best_token_id = None
 
-        ids_t = torch.as_tensor(candidate_ids, device=logits_t.device)
-        candidate_values = logits_t[ids_t]
-        best_idx = torch.argmax(candidate_values).item()
+        for s in choices:
+            if not s:
+                continue
+            
+            token_id = self._get_token_id(s)
+            # Просто берем число из списка по индексу
+            current_logit = raw_logits[token_id]
+            
+            # Старый добрый алгоритм поиска максимума в цикле
+            if current_logit > best_logit:
+                best_logit = current_logit
+                best_token_id = token_id
 
-        return candidate_ids[int(best_idx)]
+        return best_token_id
 
     def _generate_word(self, choices: List[str]) -> str:
         """
@@ -121,7 +158,7 @@ class JSONGenerator:
                 self._sync_push(candidates[0])
                 continue
 
-            next_id = self._sample_constrained(candidates)
+            next_id = self._generate_id(candidates)
             if next_id is None:
                 break
             self._sync_push([next_id])
@@ -160,9 +197,7 @@ class JSONGenerator:
         self.current_ids, self.current_text = [], ""
         schemes = {f.name: f for f in funcs}
 
-        header = "Available tools:\n"
-        header += "\n".join([f"- {f.name}: {f.description}" for f in funcs])
-        header += f"\n\nprompt: {prompt}\nJSON:\n"
+        header = ''
         header += f'{{\n  "prompt": "{prompt}",\n  "name": "'
 
         self._sync_push(header)
@@ -189,6 +224,4 @@ class JSONGenerator:
 
         self._sync_push('\n  }\n}')
 
-        if "JSON:\n" in self.current_text:
-            return self.current_text.split("JSON:\n")[-1].strip()
         return self.current_text.strip()
