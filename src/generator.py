@@ -102,30 +102,20 @@ class JSONGenerator:
         """
         if not choices:
             return None
-            
         if len(choices) == 1:
             return self._get_token_id(choices[0])
-
-        # Получаем сырой список float-ов
         raw_logits = self.model.get_logits_from_input_ids(self.current_ids)
-        # raw_logits — это теперь просто List[float] размером со словарь (например, 50000)
-
         best_logit = float('-inf')
         best_token_id = None
 
         for s in choices:
             if not s:
                 continue
-            
             token_id = self._get_token_id(s)
-            # Просто берем число из списка по индексу
             current_logit = raw_logits[token_id]
-            
-            # Старый добрый алгоритм поиска максимума в цикле
             if current_logit > best_logit:
                 best_logit = current_logit
                 best_token_id = token_id
-
         return best_token_id
 
     def _generate_word(self, choices: List[str]) -> str:
