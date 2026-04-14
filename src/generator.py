@@ -98,7 +98,12 @@ class JSONGenerator:
 
     def _generate_id(self, choices: List[str]) -> Optional[int]:
         """
-        Выбор токена без использования torch (на чистых списках).
+        Select the most probable token from a list of allowed choices.
+        Args:
+            choices: A list of string candidates for the next token.
+
+        Returns:
+            The ID of the chosen token or None if no choices provided.
         """
         if not choices:
             return None
