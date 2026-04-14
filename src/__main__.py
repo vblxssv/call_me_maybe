@@ -7,8 +7,11 @@ from typing import List
 
 
 def main() -> None:
-    generator: JSONGenerator = JSONGenerator()
     parse = PathExtractor()
+
+    print("Start lm init...")
+    generator: JSONGenerator = JSONGenerator()
+    print("Ended lm init...")
     try:
         schemes: List[FunctionScheme] = SchemeLoader.load(parse.functions)
     except Exception:

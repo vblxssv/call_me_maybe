@@ -74,17 +74,12 @@ class Writer:
             return []
 
     def _write_to_file(self, data: List[Any]) -> bool:
-        """Write the provided list of data to the file.
-
-        Args:
-            data: The list of objects to be serialized and saved.
-
-        Returns:
-            True if writing was successful, False if an IOError occurred.
-        """
+        """Write the provided list of data to the file."""
         try:
+            os.makedirs(os.path.dirname(self.path), exist_ok=True)
             with open(self.path, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=4, ensure_ascii=False)
+
             return True
         except IOError as e:
             print(f"Error writing file: {e}")
