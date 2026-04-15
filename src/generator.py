@@ -63,42 +63,10 @@ class JSONGenerator:
             self.current_ids.extend(data)
             self.current_text += self.model.decode(data)
 
-    def _generate_id(self, choices: List[str]) -> Optional[int]:
-        """
-        Select the most probable token from a list of allowed choices.
-
-        Args:
-            choices: A list of string candidates for the next token.
-
-        Returns:
-            The ID of the chosen token or None if no choices provided.
-        """
-        if not choices:
-            return None
-        if len(choices) == 1:
-            return self._get_token_id(choices[0])
-
-        # List[float]
-        raw_logits = self.model.get_logits_from_input_ids(self.current_ids)
-        # Tensor -> тензор из логитов
-        logits_t = torch.as_tensor(raw_logits)
-
-        # List[int] -> индексы кандидатов
-        candidate_ids = [self._get_token_id(c) for c in choices if c]
-        if not candidate_ids:
-            return None
-        # Tensor -> тензор из кандидатов
-        ids_t = torch.as_tensor(candidate_ids, device=logits_t.device)
-        # List -> логиты кандидатов
-        candidate_values = logits_t[ids_t]
-        # Самый вероятный индекс из даных
-        best_idx = torch.argmax(candidate_values).item()
-
-        return candidate_ids[int(best_idx)]
-
     # def _generate_id(self, choices: List[str]) -> Optional[int]:
     #     """
     #     Select the most probable token from a list of allowed choices.
+
     #     Args:
     #         choices: A list of string candidates for the next token.
 
@@ -109,19 +77,51 @@ class JSONGenerator:
     #         return None
     #     if len(choices) == 1:
     #         return self._get_token_id(choices[0])
-    #     raw_logits = self.model.get_logits_from_input_ids(self.current_ids)
-    #     best_logit = float('-inf')
-    #     best_token_id = None
 
-    #     for s in choices:
-    #         if not s:
-    #             continue
-    #         token_id = self._get_token_id(s)
-    #         current_logit = raw_logits[token_id]
-    #         if current_logit > best_logit:
-    #             best_logit = current_logit
-    #             best_token_id = token_id
-    #     return best_token_id
+    #     # List[float]
+    #     raw_logits = self.model.get_logits_from_input_ids(self.current_ids)
+    #     # Tensor -> тензор из логитов
+    #     logits_t = torch.as_tensor(raw_logits)
+
+    #     # List[int] -> индексы кандидатов
+    #     candidate_ids = [self._get_token_id(c) for c in choices if c]
+    #     if not candidate_ids:
+    #         return None
+    #     # Tensor -> тензор из кандидатов
+    #     ids_t = torch.as_tensor(candidate_ids, device=logits_t.device)
+    #     # List -> логиты кандидатов
+    #     candidate_values = logits_t[ids_t]
+    #     # Самый вероятный индекс из даных
+    #     best_idx = torch.argmax(candidate_values).item()
+
+    #     return candidate_ids[int(best_idx)]
+
+    def _generate_id(self, choices: List[str]) -> Optional[int]:
+        """
+        Select the most probable token from a list of allowed choices.
+        Args:
+            choices: A list of string candidates for the next token.
+
+        Returns:
+            The ID of the chosen token or None if no choices provided.
+        """
+        if not choices:
+            return None
+        if len(choices) == 1:
+            return self._get_token_id(choices[0])
+        raw_logits = self.model.get_logits_from_input_ids(self.current_ids)
+        best_logit = float('-inf')
+        best_token_id = None
+
+        for s in choices:
+            if not s:
+                continue
+            token_id = self._get_token_id(s)
+            current_logit = raw_logits[token_id]
+            if current_logit > best_logit:
+                best_logit = current_logit
+                best_token_id = token_id
+        return best_token_id
 
     def _generate_word(self, choices: List[str]) -> str:
         """

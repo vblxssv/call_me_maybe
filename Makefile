@@ -27,8 +27,8 @@ clean:
 
 lint:
 	$(UV) run flake8 src/
-	$(UV) run mypy -p src --warn-return-any --warn-unused-ignores --ignore-missing-imports --disallow-untyped-defs --check-untyped-defs --explicit-package-bases
+	$(UV) run mypy -p src --warn-return-any --warn-unused-ignores --ignore-missing-imports --disallow-untyped-defs --check-untyped-defs
 
 lint-strict:
 	$(UV) run flake8 src/
-	$(UV) run mypy -p src --strict --explicit-package-bases
+	$(UV) run mypy -p src --strict
