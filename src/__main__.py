@@ -7,8 +7,11 @@ from typing import List
 
 
 def main() -> None:
-    parse = PathExtractor()
-
+    try:
+        parse = PathExtractor()
+    except Exception as e:
+        print(f"\nERROR: {e}")
+        return
     print("Start lm init...")
     generator: JSONGenerator = JSONGenerator()
     print("Ended lm init...")
@@ -36,4 +39,7 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("ERROR: Interrupted via keyboard.")

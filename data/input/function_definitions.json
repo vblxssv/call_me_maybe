@@ -7,7 +7,7 @@
         "type": "number"
       },
       "b": {
-        "type": "number"
+        "type": "number§"
       }
     },
     "returns": {
