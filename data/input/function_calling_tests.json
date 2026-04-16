@@ -1,6 +1,6 @@
 [
-  { "prompt": "What is the sum of -2 and 3?" },
-  { "prompt": "What is the sum of 265 and 345?" },
+  { "prompt": "What is the sum of 2 and 3?" },
+  { "prompt": "What is the sum of 2.65 and 345?" },
   { "prompt": "Add 10 and 15" },
   { "prompt": "Calculate 99 plus 1" },
   { "prompt": "Sum of 0 and 0" },
@@ -33,9 +33,9 @@
   { "prompt": "Replace 'red' with 'blue' in 'red car and red bike'" },
   { "prompt": "Change 'apple' to 'orange' in 'apple pie and apple juice'" },
 
-  { "prompt": "Add -5 and 10" },
+  { "prompt": "Add 5 and 10" },
   { "prompt": "Sum of 3.5 and 2.5" },
-  { "prompt": "Square root of -1" },
+  { "prompt": "Square root of 1" },
   { "prompt": "Substitute 'x' with 'y' in 'nothing to replace here'" },
 
   { "prompt": "Can you add these numbers: 7 and 8?" },

@@ -34,7 +34,8 @@ class PathExtractor(BaseModel):
                 if args[i].startswith("--"):
                     flag_name = args[i].lstrip("-")
                     if flag_name in required_flags:
-                        if i + 1 < len(args) and not args[i + 1].startswith("--"):
+                        if (i + 1 < len(args)
+                                and not args[i + 1].startswith("--")):
                             parsed_paths[flag_name] = args[i + 1]
             data["paths"] = parsed_paths
         return data
@@ -51,10 +52,12 @@ class PathExtractor(BaseModel):
             ValueError: If any required flag is missing.
         """
         required_flags = ["functions_definition", "input", "output"]
-        missing = [f"--{flag}" for flag in required_flags if flag not in self.paths]
+        missing = [f"--{flag}"
+                   for flag in required_flags if flag not in self.paths]
 
         if missing:
-            raise ValueError(f"Missing required arguments: {', '.join(missing)}")
+            raise ValueError(f"Missing required "
+                             f"arguments: {', '.join(missing)}")
         return self
 
     @property

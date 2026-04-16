@@ -216,8 +216,9 @@ class JSONGenerator:
             else:
                 start_offset = len(self.current_text)
                 self._generate_until([',', ' ', '\n', '}'], 20)
-                generated_val = self.current_text[start_offset:].strip()
-                if "integer" not in p_type.lower() and "." not in generated_val:
+                generated_val: str = self.current_text[start_offset:].strip()
+                if ("integer" not in p_type.lower()
+                        and "." not in generated_val):
                     if generated_val.lstrip('-').isdigit():
                         self._sync_push(".0")
 
