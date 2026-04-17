@@ -8,3 +8,6 @@ ENV/
 
 data/output/
 .DS_Store
+
+moulinette/
+moulinette/*
