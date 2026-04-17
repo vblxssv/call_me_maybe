@@ -4,6 +4,7 @@ from .function_scheme import SchemeLoader, FunctionScheme
 from .writer import Writer
 from .prompt_reader import Reader
 from typing import List
+import json
 
 
 def main() -> None:
@@ -26,7 +27,9 @@ def main() -> None:
     for prompt in reader.stream_prompts():
         print(f"Processing prompt: '{prompt[:50]}...'")
         try:
-            generated_json_str = generator.generate(prompt, schemes)
+            safe_prompt = json.dumps(prompt, ensure_ascii=False)
+            escaped_only = safe_prompt[1:-1]
+            generated_json_str = generator.generate(escaped_only, schemes)
             if writer.add_to_json(generated_json_str):
                 print("Successfully saved result.")
             else:
@@ -34,7 +37,6 @@ def main() -> None:
         except Exception as e:
             print(f"An error occurred during generation: {e}")
             continue
-
     print("Processing complete.")
 
 

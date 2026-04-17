@@ -1,46 +1,35 @@
 [
-  { "prompt": "What is the sum of 2 and 3?" },
-  { "prompt": "What is the sum of 2.65 and 345?" },
-  { "prompt": "Add 10 and 15" },
-  { "prompt": "Calculate 99 plus 1" },
-  { "prompt": "Sum of 0 and 0" },
-
-  { "prompt": "Greet shrek" },
-  { "prompt": "Greet john" },
-  { "prompt": "Greet Bob" },
-  { "prompt": "Say hi to 'Michael'" },
-
-  { "prompt": "Reverse the 'hello'" },
-  { "prompt": "Reverse the 'world'" },
-  { "prompt": "Reverse 'ChatGPT'" },
-  { "prompt": "Can you reverse 'OpenAI'?" },
-  { "prompt": "Reverse the string '12345'" },
-
-  { "prompt": "What is the square root of 16?" },
-  { "prompt": "Calculate the square root of 144" },
-  { "prompt": "Square root of 81" },
-  { "prompt": "Find sqrt of 100" },
-  { "prompt": "What is √49?" },
-
-  { "prompt": "Replace all digits in 'Hello 34 I'm 233 years old' with 'NUMBERS'" },
-  { "prompt": "Replace digits in 'Test 123 test 456' with X" },
-  { "prompt": "Change all numbers in '1 apple, 2 bananas, 3 oranges' to NUM" },
-
-  { "prompt": "Replace all vowels in 'Programming is fun' with 'asterisks'" },
-  { "prompt": "Replace vowels in 'Hello World' with *" },
-
-  { "prompt": "Substitute the word 'cat' with 'dog' in 'The cat sat on the mat with another cat'" },
-  { "prompt": "Replace 'red' with 'blue' in 'red car and red bike'" },
-  { "prompt": "Change 'apple' to 'orange' in 'apple pie and apple juice'" },
-
-  { "prompt": "Add 5 and 10" },
-  { "prompt": "Sum of 3.5 and 2.5" },
-  { "prompt": "Square root of 1" },
-  { "prompt": "Substitute 'x' with 'y' in 'nothing to replace here'" },
-
-  { "prompt": "Can you add these numbers: 7 and 8?" },
-  { "prompt": "I want to greet 'Daniel'" },
-  { "prompt": "Flip this text 'abcdef'" },
-  { "prompt": "Give me sqrt for 225" },
-  { "prompt": "Swap cat with dog in 'catcatcat'" }
+  {
+    "prompt": "What is the product of 3 and 5?"
+  },
+  {
+    "prompt": "What is the product of 12 and 4?"
+  },
+  {
+    "prompt": "Is 4 an even number?"
+  },
+  {
+    "prompt": "Is 7 an even number?"
+  },
+  {
+    "prompt": "Calculate compound interest on 1234567.89 at 0.0375 rate for 23 years"
+  },
+  {
+    "prompt": "Execute SQL query 'SELECT * FROM users' on the production database"
+  },
+  {
+    "prompt": "Run the query 'INSERT INTO logs VALUES (1, 2, 3)' on the system database"
+  },
+  {
+    "prompt": "Read the file at /home/user/data.json with utf-8 encoding"
+  },
+  {
+    "prompt": "Read C:\\Users\\john\\config.ini with latin-1 encoding"
+  },
+  {
+    "prompt": "Format template: Hello {user}'s profile!"
+  },
+  {
+    "prompt": "Format template: Say \"hello\" to {name}"
+  }
 ]
