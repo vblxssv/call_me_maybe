@@ -3,7 +3,7 @@ from typing import List, Any, Optional, Dict
 from llm_sdk import Small_LLM_Model
 
 
-class JSONGenerator:
+# class JSONGenerator:
     """
     A constant JSON generator with optimized token selection.
 
@@ -177,6 +177,7 @@ class JSONGenerator:
             if any(s in char for s in stops):
                 break
             self._sync_push([next_id])
+            print(repr(self.current_text) + '\n')
 
     def generate(self, prompt: str, funcs: List[Any]) -> str:
         """
@@ -230,3 +231,26 @@ class JSONGenerator:
         if "JSON:\n" in self.current_text:
             return self.current_text.split("JSON:\n")[-1].strip()
         return self.current_text.strip()
+
+    def _build_mask(self, forbiden: List[str],
+                    size: Optional[int] = None) -> torch.Tensor:
+        vocab: Dict[str, int] = self.model._tokenizer.get_vocab()
+        actual_vocab_size: int = size if size is not None else len(vocab)
+
+        mask: torch.Tensor = torch.zeros(actual_vocab_size)
+
+        for _, token_id in vocab.items():
+            if token_id >= actual_vocab_size:
+                continue
+            try:
+                decoded_t: str = self.model.decode([token_id])
+            except Exception:
+                continue
+            has_stop: bool = any(s in decoded_t for s in forbiden)
+            is_pure_stop: bool = decoded_t in forbiden
+            has_control: bool = any(ord(c) < 32 for c in decoded_t)
+
+            if (has_stop and not is_pure_stop) or has_control:
+                mask[token_id] = -float('inf')
+
+        return mask

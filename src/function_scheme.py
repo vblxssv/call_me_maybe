@@ -1,7 +1,16 @@
 import json
 import os
 from typing import Dict, List, Any
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
+from enum import StrEnum
+
+
+class ParamType(StrEnum):
+    STRING = 'string'
+    NUMBER = 'number'
+    FLOAT = 'float'
+    INTEGER = 'integer'
+    BOOL = 'bool'
 
 
 class FunctionParameter(BaseModel):
@@ -14,13 +23,7 @@ class FunctionParameter(BaseModel):
     """
 
     name: str
-    param_type: str = Field(alias="type")
-
-    def __repr__(self) -> str:
-        """Return a formatted string representation as 'name: type'."""
-        return f"{self.name}: {self.param_type}"
-
-    model_config = {"populate_by_name": True}
+    type: ParamType
 
 
 class FunctionScheme(BaseModel):
@@ -30,48 +33,27 @@ class FunctionScheme(BaseModel):
     Attributes:
         name (str): The name of the function.
         description (str): A brief description of what the function does.
-        params (List[FunctionParameter]): A list of FunctionParameter objects.
-        params_dict (Dict[str, str]): A mapping of parameter names to types.
+        params (Dict[str, ParamType]): A mapping of parameter names to types.
     """
 
     name: str
     description: str
-    params: List[FunctionParameter] = Field(default_factory=list)
-    params_dict: Dict[str, str] = Field(default_factory=dict)
+    params: Dict[str, ParamType]
 
     def __init__(self, **data: Any):
-        """
-        Initialize the scheme and reconstruct params and params_dict.
+        raw_params = data.pop('parameters', {})
 
-        This ensures logic parity with the original non-Pydantic version.
-        """
-        if "parameters" in data:
-            raw_params = data["parameters"]
-            data["params"] = [
-                FunctionParameter(name=p_name, type=p_info['type'])
-                for p_name, p_info in raw_params.items()
-            ]
-            data["params_dict"] = {
-                p.name: p.param_type for p in data["params"]
+        if not data.get('params') and raw_params:
+            data['params'] = {
+                name: details['type'] if isinstance(details, dict) else details
+                for name, details in raw_params.items()
             }
         super().__init__(**data)
 
-    def get_type(self, param_name: str) -> str:
-        """
-        Retrieve the type of a specific parameter.
-
-        Args:
-            param_name (str): The name of the parameter to look up.
-
-        Returns:
-            str: The type of the parameter, or "string" if not found.
-        """
-        return self.params_dict.get(param_name, "string")
-
     def __repr__(self) -> str:
-        """Return a detailed string representation of the FunctionScheme."""
-        params_str = ", ".join([repr(p) for p in self.params])
-        return f"FunctionScheme(name='{self.name}', params=[{params_str}])"
+        params_str = ", ".join([f"{k}: {v.value}"
+                                for k, v in self.params.items()])
+        return f"FunctionScheme(name='{self.name}', params={{ {params_str} }})"
 
 
 class SchemeLoader:
