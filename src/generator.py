@@ -1,256 +1,44 @@
-import torch
-from typing import List, Any, Optional, Dict
-from llm_sdk import Small_LLM_Model
+from .lm_manager import LMManager
+from typing import List
+from .function_scheme import FunctionScheme, ParamType
 
 
-# class JSONGenerator:
-    """
-    A constant JSON generator with optimized token selection.
+class JSONGenerator:
+    def __init__(self, functions: List[FunctionScheme]):
+        self.generator: LMManager = LMManager()
+        self.functions: List[FunctionScheme] = functions
 
-    This class forces a language model to generate valid JSON by constraining
-    the output vocabulary at each step based on the expected JSON schema.
-    """
-
-    def __init__(self) -> None:
-        """Initialize the generator with model and caching state."""
-        self.model = Small_LLM_Model()
-        self.current_ids: List[int] = []
-        self.current_text: str = ""
-        self._token_cache: Dict[str, int] = {}
-
-    def _get_token_id(self, s: str) -> int:
-        """
-        Get the ID of the first token of a string using a cache.
-
-        Args:
-            s: The string to tokenize.
-
-        Returns:
-            The ID of the first token.
-        """
-        if not s:
-            return 0
-        if s not in self._token_cache:
-            encoded = self.model.encode(s)[0]
-            self._token_cache[s] = int(encoded[0].item())
-        return self._token_cache[s]
-
-    def _get_encoded(self, text: str) -> List[int]:
-        """
-        Encode text into a list of token IDs.
-
-        Args:
-            text: Input string.
-
-        Returns:
-            List of token integers.
-        """
-        raw_data: Any = self.model.encode(text)[0]
-        return list(raw_data.tolist())
-
-    def _sync_push(self, data: Any) -> None:
-        """
-        Append data to state and synchronize text and tokens.
-
-        Args:
-            data: Either a string or a list of token IDs.
-        """
-        if isinstance(data, str):
-            ids = self._get_encoded(data)
-            self.current_ids.extend(ids)
-            self.current_text += data
-        else:
-            self.current_ids.extend(data)
-            self.current_text += self.model.decode(data)
-
-    # def _generate_id(self, choices: List[str]) -> Optional[int]:
-    #     """
-    #     Select the most probable token from a list of allowed choices.
-
-    #     Args:
-    #         choices: A list of string candidates for the next token.
-
-    #     Returns:
-    #         The ID of the chosen token or None if no choices provided.
-    #     """
-    #     if not choices:
-    #         return None
-    #     if len(choices) == 1:
-    #         return self._get_token_id(choices[0])
-
-    #     # List[float]
-    #     raw_logits = self.model.get_logits_from_input_ids(self.current_ids)
-    #     # Tensor -> тензор из логитов
-    #     logits_t = torch.as_tensor(raw_logits)
-
-    #     # List[int] -> индексы кандидатов
-    #     candidate_ids = [self._get_token_id(c) for c in choices if c]
-    #     if not candidate_ids:
-    #         return None
-    #     # Tensor -> тензор из кандидатов
-    #     ids_t = torch.as_tensor(candidate_ids, device=logits_t.device)
-    #     # List -> логиты кандидатов
-    #     candidate_values = logits_t[ids_t]
-    #     # Самый вероятный индекс из даных
-    #     best_idx = torch.argmax(candidate_values).item()
-
-    #     return candidate_ids[int(best_idx)]
-
-    def _generate_id(self, choices: List[str]) -> Optional[int]:
-        """
-        Select the most probable token from a list of allowed choices.
-        Args:
-            choices: A list of string candidates for the next token.
-
-        Returns:
-            The ID of the chosen token or None if no choices provided.
-        """
-        if not choices:
-            return None
-        if len(choices) == 1:
-            return self._get_token_id(choices[0])
-        raw_logits = self.model.get_logits_from_input_ids(self.current_ids)
-        best_logit = float('-inf')
-        best_token_id = None
-
-        for s in choices:
-            if not s:
-                continue
-            token_id = self._get_token_id(s)
-            current_logit = raw_logits[token_id]
-            if current_logit > best_logit:
-                best_logit = current_logit
-                best_token_id = token_id
-        return best_token_id
-
-    def _generate_word(self, choices: List[str]) -> str:
-        """
-        Generate a word until it matches one of the provided choices.
-
-        Args:
-            choices: List of valid string options.
-
-        Returns:
-            The generated string.
-        """
-        start_len = len(self.current_text)
-
-        for _ in range(50):
-            gen_part = self.current_text[start_len:].strip().replace('"', '')
-
-            if gen_part in choices:
-                return gen_part
-
-            candidates = [
-                c[len(gen_part):] for c in choices
-                if c.startswith(gen_part) and c != gen_part
-            ]
-
-            if not candidates:
-                break
-
-            if len(candidates) == 1:
-                self._sync_push(candidates[0])
-                continue
-
-            next_id = self._generate_id(candidates)
-            if next_id is None:
-                break
-            self._sync_push([next_id])
-
-        return self.current_text[start_len:].strip().replace('"', '')
-
-    def _generate_until(self, stops: List[str], limit: int) -> None:
-        """
-        Perform greedy generation until a stop sequence is encountered.
-
-        Args:
-            stops: List of characters/strings that trigger a stop.
-            limit: Maximum number of tokens to generate.
-        """
-        for _ in range(limit):
-            raw_logits = self.model.get_logits_from_input_ids(self.current_ids)
-            logits = torch.as_tensor(raw_logits)
-            next_id = int(logits.argmax().item())
-
-            char = self.model.decode([next_id])
-            if any(s in char for s in stops):
-                break
-            self._sync_push([next_id])
-            print(repr(self.current_text) + '\n')
-
-    def generate(self, prompt: str, funcs: List[Any]) -> str:
-        """
-        The main cycle for generating a structured JSON response.
-
-        Args:
-            prompt: The user query.
-            funcs: List of available function objects with schema info.
-
-        Returns:
-            A string containing the valid JSON object.
-        """
-        self.current_ids, self.current_text = [], ""
-        schemes = {f.name: f for f in funcs}
-
+    def _build_header(self, prompt: str) -> str:
         header = "Available tools:\n"
-        header += "\n".join([f"- {f.name}: {f.description}" for f in funcs])
+        header += "\n".join([f"- {f.name}: {f.description}"
+                             for f in self.functions])
         header += f"\n\nprompt: {prompt}\nJSON:\n"
-        header += f'{{\n  "prompt": "{prompt}",\n  "name": "'
+        header += f'{{\n  "prompt": "{prompt}",\n'
+        return header
 
-        self._sync_push(header)
+    def get_json(self, prompt: str) -> str:
+        lm = self.generator
+        lm.reset()
+        schemes: Dict[str, FunctionScheme] = {f.name: f for f in self.functions
+                                              }
 
-        name = self._generate_word(list(schemes.keys()))
-        if not name or name not in schemes:
-            return "{}"
+        lm.sync_push(self._build_header(prompt))
 
-        self._sync_push('",\n  "parameters": {')
+        lm.sync_push('  "name": "')
+        name: str = lm.pick_word(list(schemes.keys()))[:-1]
+        chosen_func: FunctionScheme = schemes[name]
 
-        params = list(schemes[name].params_dict.items())
-        for i, (p_name, p_type) in enumerate(params):
-            self._sync_push(f'\n    "{p_name}": ')
+        lm.sync_push(',\n  "parameters": {\n')
 
-            if "string" in p_type.lower():
-                self._sync_push('"')
-                self._generate_until(['"'], 70)
-                self._sync_push('"')
-            else:
-                start_offset = len(self.current_text)
-                self._generate_until([',', ' ', '\n', '}'], 40)
-                generated_val: str = self.current_text[start_offset:].strip()
-                if ("integer" not in p_type.lower()
-                        and "." not in generated_val):
-                    if generated_val.lstrip('-').isdigit():
-                        self._sync_push(".0")
+        total_params: int = len(list(chosen_func.params.items()))
+        for i, (name, type) in enumerate(chosen_func.params.items()):
+            lm.sync_push(f'    "{name}": ')
+            argument: str = lm.generate_until(type)
+            if ('.' not in argument and
+                    (type == ParamType.NUMBER or type == ParamType.FLOAT)):
+                lm.sync_push(".0")
+            if i != total_params - 1:
+                lm.sync_push(",\n")
+        lm.sync_push('\n  }\n}')
 
-            if i < len(params) - 1:
-                self._sync_push(",")
-
-        self._sync_push('\n  }\n}')
-
-        if "JSON:\n" in self.current_text:
-            return self.current_text.split("JSON:\n")[-1].strip()
-        return self.current_text.strip()
-
-    def _build_mask(self, forbiden: List[str],
-                    size: Optional[int] = None) -> torch.Tensor:
-        vocab: Dict[str, int] = self.model._tokenizer.get_vocab()
-        actual_vocab_size: int = size if size is not None else len(vocab)
-
-        mask: torch.Tensor = torch.zeros(actual_vocab_size)
-
-        for _, token_id in vocab.items():
-            if token_id >= actual_vocab_size:
-                continue
-            try:
-                decoded_t: str = self.model.decode([token_id])
-            except Exception:
-                continue
-            has_stop: bool = any(s in decoded_t for s in forbiden)
-            is_pure_stop: bool = decoded_t in forbiden
-            has_control: bool = any(ord(c) < 32 for c in decoded_t)
-
-            if (has_stop and not is_pure_stop) or has_control:
-                mask[token_id] = -float('inf')
-
-        return mask
+        return lm.current_text.split('\nJSON:\n')[1]

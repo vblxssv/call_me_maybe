@@ -1,4 +1,4 @@
-from .lm_manager import JSONGenerator
+from .generator import JSONGenerator
 from .path_extractor import PathExtractor
 from .function_scheme import SchemeLoader, FunctionScheme
 from .writer import Writer
