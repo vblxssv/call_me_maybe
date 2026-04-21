@@ -1,6 +1,6 @@
 import sys
 from typing import Dict, Any
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, model_validator
 
 
 class PathExtractor(BaseModel):
@@ -11,7 +11,7 @@ class PathExtractor(BaseModel):
         paths (Dict[str, str]): A mapping of flag names to their file paths.
     """
 
-    paths: Dict[str, str] = Field(default_factory=dict)
+    paths: Dict[str, str]
 
     @model_validator(mode="before")
     @classmethod

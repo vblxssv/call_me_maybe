@@ -1,8 +1,7 @@
 import torch
 from typing import List, Any, Optional, Dict
 from llm_sdk import Small_LLM_Model
-from .function_scheme import FunctionScheme, ParamType
-import random
+from .function_scheme import ParamType
 
 
 class LMManager:
@@ -11,6 +10,8 @@ class LMManager:
         self.tokenizer = self.model._tokenizer
         self.current_text: str = ''
         self.current_ids: List[int] = []
+        self.string_mask = self._build_mask(['"'])
+        self.digit_mask = self._build_mask([',', '}', ']', '\n', '"'])
 
     def _get_encoded(self, context: str) -> List[int]:
         raw_data: Any = self.model.encode(context)[0]
@@ -27,7 +28,8 @@ class LMManager:
     def _generate(self, mask: torch.Tensor) -> int:
         logits = self._get_logits()
         if mask.shape[0] < logits.shape[0]:
-            padding = torch.zeros(logits.shape[0] - mask.shape[0], device=mask.device)
+            padding = torch.zeros(logits.shape[0] - mask.shape[0],
+                                  device=mask.device)
             mask = torch.cat([mask, padding])
         masked_logits = logits + mask.to(logits.device)
         return int(masked_logits.argmax().item())
@@ -77,20 +79,27 @@ class LMManager:
         if p_type == ParamType.STRING:
             self.sync_push('"')
             stops = ['"']
+            mask = self.string_mask
+            is_first_token = True
         else:
             stops = [',', '}', ']', '\n', '"']
+            is_first_token = False
+            mask = self.digit_mask
 
-        mask = self._build_mask(stops)
         generated_text = ""
-        while True:
 
+        while True:
             token_id = self._generate(mask)
             decoded_token = self.model.decode([token_id])
-            print(repr(decoded_token))
+
             if any(s in decoded_token for s in stops):
                 if p_type == ParamType.STRING:
                     self.sync_push('"')
                 break
+            if p_type == ParamType.STRING and is_first_token:
+                decoded_token = decoded_token.lstrip()
+                is_first_token = False
+                token_id = self._get_encoded([decoded_token])[0][0]
 
             self.sync_push([token_id])
             generated_text += decoded_token
@@ -98,7 +107,7 @@ class LMManager:
             if len(generated_text) > 70:
                 if p_type == ParamType.STRING:
                     self.sync_push('"')
-                    break
+                break
 
         return generated_text
 

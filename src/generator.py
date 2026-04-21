@@ -1,5 +1,5 @@
 from .lm_manager import LMManager
-from typing import List
+from typing import List, Dict
 from .function_scheme import FunctionScheme, ParamType
 
 
