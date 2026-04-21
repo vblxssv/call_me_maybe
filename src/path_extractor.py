@@ -1,76 +1,73 @@
 import sys
-from typing import Dict, Any
-from pydantic import BaseModel, model_validator
+from typing import Dict, List
+
+from pydantic import BaseModel, Field
 
 
 class PathExtractor(BaseModel):
     """
-    Parses and validates command-line arguments for file paths using Pydantic.
+    Handles extraction and validation of file paths from command line arguments
+
+    This class serves as a container for mandatory file paths required by the
+    application. It provides a factory method to parse these paths directly
+    from sys.argv.
 
     Attributes:
-        paths (Dict[str, str]): A mapping of flag names to their file paths.
+        paths (Dict[str, str]): A mapping of flag names to their respective
+            file system paths.
     """
 
-    paths: Dict[str, str]
+    paths: Dict[str, str] = Field(description="paths")
 
-    @model_validator(mode="before")
     @classmethod
-    def extract_from_sys_argv(cls, data: Any) -> Any:
+    def from_sys_argv(cls) -> "PathExtractor":
         """
-        Extract paths from sys.argv if not explicitly provided.
+        Create a PathExtractor instance by parsing command-line arguments.
 
-        Args:
-            data (Any): Initial data for the model.
+        Iterates through sys.argv to find specific flags (--input, --output,
+        --functions_definition) and their associated values.
 
         Returns:
-            Any: Data dictionary with populated paths.
-        """
-        if isinstance(data, dict) and not data.get("paths"):
-            required_flags = ["functions_definition", "input", "output"]
-            args = sys.argv[1:]
-            parsed_paths = {}
-
-            for i in range(len(args)):
-                if args[i].startswith("--"):
-                    flag_name = args[i].lstrip("-")
-                    if flag_name in required_flags:
-                        if (i + 1 < len(args)
-                                and not args[i + 1].startswith("--")):
-                            parsed_paths[flag_name] = args[i + 1]
-            data["paths"] = parsed_paths
-        return data
-
-    @model_validator(mode="after")
-    def validate_required_paths(self) -> "PathExtractor":
-        """
-        Ensure all mandatory paths are present in the dictionary.
-
-        Returns:
-            PathExtractor: The validated instance.
+            PathExtractor: An initialized instance containing the parsed paths.
 
         Raises:
-            ValueError: If any required flag is missing.
+            ValueError: If any of the required arguments are missing from the
+                command-line input.
         """
         required_flags = ["functions_definition", "input", "output"]
-        missing = [f"--{flag}"
-                   for flag in required_flags if flag not in self.paths]
+        args = sys.argv[1:]
+        parsed_paths: Dict[str, str] = {}
+
+        for i, arg in enumerate(args):
+            if arg.startswith("--"):
+                flag_name = arg.lstrip("-")
+                if flag_name in required_flags:
+                    # Check if next argument exists and is not another flag
+                    if i + 1 < len(args) and not args[i + 1].startswith("--"):
+                        parsed_paths[flag_name] = args[i + 1]
+
+        missing: List[str] = [
+            f"--{f}" for f in required_flags if f not in parsed_paths
+        ]
 
         if missing:
-            raise ValueError(f"Missing required "
-                             f"arguments: {', '.join(missing)}")
-        return self
+            raise ValueError(
+                f"Missing required arguments: {', '.join(missing)}"
+            )
+
+        return cls(paths=parsed_paths)
 
     @property
     def functions(self) -> str:
-        """Return the path to the functions definition file."""
+        """Return the file path for functions definition."""
         return self.paths["functions_definition"]
 
     @property
     def input(self) -> str:
-        """Return the path to the input file."""
+        """Return the file path for input data."""
         return self.paths["input"]
 
     @property
     def output(self) -> str:
-        """Return the path to the output file."""
+        """Return the file path for output results."""
         return self.paths["output"]

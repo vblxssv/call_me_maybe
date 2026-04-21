@@ -7,8 +7,8 @@ from typing import List
 import json
 
 
-def main():
-    paths: PathExtractor = PathExtractor()
+def main() -> None:
+    paths: PathExtractor = PathExtractor.from_sys_argv()
     reader: Reader = Reader(paths.input)
     schemes: List[FunctionScheme] = SchemeLoader.load(paths.functions)
     writer: Writer = Writer(paths.output)

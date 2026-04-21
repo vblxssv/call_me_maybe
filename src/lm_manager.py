@@ -5,7 +5,7 @@ from .function_scheme import ParamType
 
 
 class LMManager:
-    def __init__(self):
+    def __init__(self) -> None:
         self.model = Small_LLM_Model()
         self.tokenizer = self.model._tokenizer
         self.current_text: str = ''
@@ -64,7 +64,7 @@ class LMManager:
                     t_id = seq[step]
                     candidates[t_id] = logits[t_id].item()
 
-            max_key: int = max(candidates, key=candidates.get)
+            max_key: int = max(candidates, key=lambda k: candidates[k])
             result += self.model.decode([max_key])
             self.sync_push([max_key])
             if max_key == quote_token_id:
@@ -99,7 +99,7 @@ class LMManager:
             if p_type == ParamType.STRING and is_first_token:
                 decoded_token = decoded_token.lstrip()
                 is_first_token = False
-                token_id = self._get_encoded([decoded_token])[0][0]
+                token_id = self._get_encoded(decoded_token)[0]
 
             self.sync_push([token_id])
             generated_text += decoded_token
