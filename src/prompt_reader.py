@@ -1,6 +1,5 @@
 import json
 import os
-from dataclasses import dataclass
 from typing import Dict, Generator, Any, List
 from pydantic import BaseModel, ValidationError
 
@@ -16,25 +15,22 @@ class PromptItem(BaseModel):
     prompt: str
 
 
-@dataclass
-class Reader:
+class Reader(BaseModel):
     """
     A utility class to read and stream prompts from a JSON file.
-
-    Attributes:
-        path (str): The file path to the JSON source.
     """
 
     path: str
 
+    def __init__(self, path: str, **data: Any) -> None:
+        """
+        Initialize the reader with a path as a positional argument.
+        """
+        super().__init__(path=path, **data)
+
     def stream_prompts(self) -> Generator[str, None, None]:
         """
         Read a JSON file and yield prompts one by one.
-
-        Expected format: [{"prompt": "text"}, ...]
-
-        Yields:
-            str: The 'prompt' value from each valid item.
         """
         if not os.path.exists(self.path) or os.path.getsize(self.path) == 0:
             print(f"Warning: File {self.path} is empty or does not exist.")

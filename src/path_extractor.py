@@ -42,7 +42,6 @@ class PathExtractor(BaseModel):
             if arg.startswith("--"):
                 flag_name = arg.lstrip("-")
                 if flag_name in required_flags:
-                    # Check if next argument exists and is not another flag
                     if i + 1 < len(args) and not args[i + 1].startswith("--"):
                         parsed_paths[flag_name] = args[i + 1]
 
