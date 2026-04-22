@@ -1,30 +1,33 @@
-from typing import List, Any, Optional, Dict, Final
-
+from typing import List, Any, Optional, Dict
 import torch
+from pydantic import BaseModel, PrivateAttr
 from llm_sdk import Small_LLM_Model
-
 from .function_scheme import ParamType
 
 
-class LMManager:
+class LMManager(BaseModel):
     """
     Manages the LLM state, tokenization, and constrained decoding logic.
 
     This class provides tools to force the model to pick from a list of words
     or generate text until a specific parameter type boundary is met.
     """
+    current_text: str = ""
+    current_ids: List[int] = []
 
-    def __init__(self) -> None:
+    _model: Small_LLM_Model = PrivateAttr()
+    _tokenizer: Any = PrivateAttr()
+    _string_mask: torch.Tensor = PrivateAttr()
+    _digit_mask: torch.Tensor = PrivateAttr()
+
+    def __init__(self, **data: Any) -> None:
         """Initialize the LM manager and pre-build logit masks."""
-        self.model: Final[Small_LLM_Model] = Small_LLM_Model()
-        self.tokenizer: Any = self.model._tokenizer
-        self.current_text: str = ""
-        self.current_ids: List[int] = []
+        super().__init__(**data)
+        self._model = Small_LLM_Model()
+        self._tokenizer = self._model._tokenizer
 
-        self.string_mask: torch.Tensor = self._build_mask(['"'])
-        self.digit_mask: torch.Tensor = self._build_mask(
-            [',', '}', ']', '\n', '"']
-        )
+        self._string_mask = self._build_mask(['"'])
+        self._digit_mask = self._build_mask([',', '}', ']', '\n', '"'])
 
     def _get_encoded(self, context: str) -> List[int]:
         """
@@ -36,7 +39,7 @@ class LMManager:
         Returns:
             A list of integer token IDs.
         """
-        raw_data: Any = self.model.encode(context)[0]
+        raw_data: Any = self._model.encode(context)[0]
         return list(raw_data.tolist())
 
     def reset(self) -> None:
@@ -52,7 +55,7 @@ class LMManager:
             A tensor of logits.
         """
         return torch.as_tensor(
-            self.model.get_logits_from_input_ids(self.current_ids)
+            self._model.get_logits_from_input_ids(self.current_ids)
         )
 
     def _generate(self, mask: torch.Tensor) -> int:
@@ -89,7 +92,7 @@ class LMManager:
             self.current_text += data
         else:
             self.current_ids.extend(data)
-            self.current_text += self.model.decode(data)
+            self.current_text += self._model.decode(data)
 
     def pick_word(self, words: List[str]) -> str:
         """
@@ -121,7 +124,7 @@ class LMManager:
                     candidates[t_id] = logits[t_id].item()
 
             max_key: int = max(candidates, key=lambda k: float(candidates[k]))
-            result += self.model.decode([max_key])
+            result += self._model.decode([max_key])
             self.sync_push([max_key])
 
             if max_key == quote_token_id:
@@ -150,18 +153,18 @@ class LMManager:
         if is_string:
             self.sync_push('"')
             stops = ['"']
-            mask = self.string_mask
+            mask = self._string_mask
             is_first_token = True
         else:
             stops = [',', '}', ']', '\n', '"']
             is_first_token = False
-            mask = self.digit_mask
+            mask = self._digit_mask
 
         generated_text = ""
 
         while True:
             token_id = self._generate(mask)
-            decoded_token = self.model.decode([token_id])
+            decoded_token = self._model.decode([token_id])
 
             if any(s in decoded_token for s in stops):
                 if is_string:
@@ -195,7 +198,7 @@ class LMManager:
         Returns:
             A tensor mask to be added to logits.
         """
-        vocab: Dict[str, int] = self.tokenizer.get_vocab()
+        vocab: Dict[str, int] = self._tokenizer.get_vocab()
         actual_vocab_size: int = size if size is not None else len(vocab)
 
         mask: torch.Tensor = torch.zeros(actual_vocab_size)
@@ -204,7 +207,7 @@ class LMManager:
             if token_id >= actual_vocab_size:
                 continue
             try:
-                decoded_t: str = self.model.decode([token_id])
+                decoded_t: str = self._model.decode([token_id])
             except Exception:
                 continue
 
