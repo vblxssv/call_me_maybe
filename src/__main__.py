@@ -8,9 +8,17 @@ import json
 
 
 def main() -> None:
-    paths: PathExtractor = PathExtractor.from_sys_argv()
+    try:
+        paths: PathExtractor = PathExtractor.from_sys_argv()
+    except Exception as e:
+        print(f"ERROR: {e}")
+        return
     reader: Reader = Reader(paths.input)
-    schemes: List[FunctionScheme] = SchemeLoader.load(paths.functions)
+    try:
+        schemes: List[FunctionScheme] = SchemeLoader.load(paths.functions)
+    except Exception as e:
+        print(f"ERROR: {e}")
+        return
     writer: Writer = Writer(paths.output)
     generator: JSONGenerator = JSONGenerator(schemes)
 

@@ -1,6 +1,6 @@
 from typing import List, Any, Optional, Dict
 import torch
-from pydantic import BaseModel, PrivateAttr
+from pydantic import BaseModel
 from llm_sdk import Small_LLM_Model
 from .function_scheme import ParamType
 
@@ -15,10 +15,10 @@ class LMManager(BaseModel):
     current_text: str = ""
     current_ids: List[int] = []
 
-    _model: Small_LLM_Model = PrivateAttr()
-    _tokenizer: Any = PrivateAttr()
-    _string_mask: torch.Tensor = PrivateAttr()
-    _digit_mask: torch.Tensor = PrivateAttr()
+    _model: Small_LLM_Model
+    _tokenizer: Any
+    _string_mask: torch.Tensor
+    _digit_mask: torch.Tensor
 
     def __init__(self, **data: Any) -> None:
         """Initialize the LM manager and pre-build logit masks."""

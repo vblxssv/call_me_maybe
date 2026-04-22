@@ -1,7 +1,7 @@
 UV = uv
 PYTHON = $(UV) run python
 
-FUNCTIONS_JSON = data/input/function_definitions.json
+FUNCTIONS_JSON = data/input/functions_definition.json
 INPUT_JSON = data/input/function_calling_tests.json
 OUTPUT_JSON = data/output/function_calling_results.json
 
