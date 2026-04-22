@@ -1,14 +1,38 @@
-from .lm_manager import LMManager
-from typing import List, Dict
+from typing import List, Dict, Final
+
 from .function_scheme import FunctionScheme, ParamType
+from .lm_manager import LMManager
 
 
 class JSONGenerator:
-    def __init__(self, functions: List[FunctionScheme]):
-        self.generator: LMManager = LMManager()
+    """
+    A generator that constructs JSON representations of function calls.
+
+    This class uses an LMManager to predict which function and parameters
+    should be used based on a provided natural language prompt.
+    """
+
+    def __init__(self, functions: List[FunctionScheme]) -> None:
+        """
+        Initialize the JSONGenerator.
+
+        Args:
+            functions: A list of available function schemes the LM can call.
+        """
+        self.generator: Final[LMManager] = LMManager()
         self.functions: List[FunctionScheme] = functions
 
     def _build_header(self, prompt: str) -> str:
+        """
+        Construct the initial context and JSON prefix for the model.
+
+        Args:
+            prompt: The user's input request.
+
+        Returns:
+            A formatted string containing tool descriptions and the start
+            of the JSON structure.
+        """
         header = "Available tools:\n"
         header += "\n".join([f"- {f.name}: {f.description}"
                              for f in self.functions])
@@ -17,6 +41,15 @@ class JSONGenerator:
         return header
 
     def get_json(self, prompt: str) -> str:
+        """
+        Generate a JSON string representing a function call via the LM.
+
+        Args:
+            prompt: The input text to process.
+
+        Returns:
+            A valid JSON-formatted string extracted from the model's output.
+        """
         lm = self.generator
         lm.reset()
         schemes: Dict[str, FunctionScheme] = {f.name: f for f in self.functions
@@ -30,15 +63,20 @@ class JSONGenerator:
 
         lm.sync_push(',\n  "parameters": {\n')
 
-        total_params: int = len(list(chosen_func.params.items()))
-        for i, (name, type) in enumerate(chosen_func.params.items()):
-            lm.sync_push(f'    "{name}": ')
-            argument: str = lm.generate_until(type)
-            if ('.' not in argument and
-                    (type == ParamType.NUMBER or type == ParamType.FLOAT)):
+        params_list = list(chosen_func.params.items())
+        total_params: int = len(params_list)
+
+        for i, (p_name, p_type) in enumerate(params_list):
+            lm.sync_push(f'    "{p_name}": ')
+            argument: str = lm.generate_until(p_type)
+
+            is_numeric = p_type in (ParamType.NUMBER, ParamType.FLOAT)
+            if is_numeric and "." not in argument:
                 lm.sync_push(".0")
+
             if i != total_params - 1:
                 lm.sync_push(",\n")
+
         lm.sync_push('\n  }\n}')
 
         return lm.current_text.split('\nJSON:\n')[1]

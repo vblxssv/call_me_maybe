@@ -2,7 +2,6 @@
 
 import json
 import os
-from dataclasses import dataclass
 from typing import Any, List, Optional
 from pydantic import BaseModel, ValidationError, TypeAdapter
 
@@ -18,14 +17,23 @@ class DataEntry(BaseModel):
     parameters: Optional[dict[str, Any]] = None
 
 
-@dataclass
-class Writer:
-    """A class to manage adding data to a JSON file."""
+class Writer(BaseModel):
+    """
+    A class to manage adding data to a JSON file.
+    """
 
     path: str
 
+    def __init__(self, path: str, **data: Any) -> None:
+        """
+        Initialize the writer.
+        """
+        super().__init__(path=path, **data)
+
     def add_to_json(self, json_str: str) -> bool:
-        """Execute the main flow of adding data to the file."""
+        """
+        Execute the main flow of adding data to the file.
+        """
         new_data = self._parse_json(json_str)
         if new_data is None:
             return False
@@ -36,7 +44,9 @@ class Writer:
         return self._write_to_file(data_list)
 
     def _parse_json(self, json_str: str) -> Optional[dict[str, Any]]:
-        """Parse string using Pydantic model validation."""
+        """
+        Parse string using Pydantic model validation.
+        """
         try:
             return DataEntry.model_validate_json(json_str).model_dump()
         except (ValidationError, json.JSONDecodeError) as e:
@@ -44,7 +54,9 @@ class Writer:
             return None
 
     def _read_existing_data(self) -> List[dict[str, Any]]:
-        """Read and validate existing list from file."""
+        """
+        Read and validate existing list from file.
+        """
         if not os.path.exists(self.path) or os.path.getsize(self.path) == 0:
             return []
 
@@ -59,7 +71,9 @@ class Writer:
             return []
 
     def _write_to_file(self, data: List[dict[str, Any]]) -> bool:
-        """Write the provided list to the file."""
+        """
+        Write the provided list to the file.
+        """
         try:
             adapter = TypeAdapter(List[DataEntry])
             valid_data = adapter.validate_python(data)

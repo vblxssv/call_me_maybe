@@ -1,7 +1,7 @@
 import sys
 from typing import Dict, List
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 
 class PathExtractor(BaseModel):
@@ -17,7 +17,7 @@ class PathExtractor(BaseModel):
             file system paths.
     """
 
-    paths: Dict[str, str] = Field(description="paths")
+    paths: Dict[str, str]
 
     @classmethod
     def from_sys_argv(cls) -> "PathExtractor":
